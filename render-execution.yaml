@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: strategy-1-execution-consumer
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements-execution.txt
+    startCommand: uvicorn execution_consumer:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.11
+      - key: EXECUTION_ENABLED
+        value: "false"
+      - key: RULESET_VERSION
+        value: v0.3
+      - key: SUPABASE_URL
+        value: https://zgegtiqsjotszaspcgzf.supabase.co
+      - key: EXECUTOR_URL
+        value: https://day-trading-paper-executor.onrender.com
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: EXECUTION_SERVICE_TOKEN
+        generateValue: true
+      - key: EXECUTOR_TOKEN
+        sync: false
