@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: strategy-1-shadow-worker
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: RULESET_VERSION
+        value: v0.3
+      - key: WORKER_VERSION
+        value: 0.1.0-shadow
+      - key: MAX_DOLLAR_RISK
+        value: "50"
+      - key: MAX_DAILY_LOSS_DOLLARS
+        value: "100"
+      - key: MAX_TRADES_PER_DAY
+        value: "3"
+      - key: MAX_NOTIONAL
+        value: "10000"
+      - key: SUPABASE_URL
+        value: https://zgegtiqsjotszaspcgzf.supabase.co
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: WORKER_TOKEN
+        generateValue: true
