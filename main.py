@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field, model_validator
 
-APP_VERSION = "0.1.1-shadow"
+APP_VERSION = "0.1.2-shadow"
 STRATEGY_ID = "STRATEGY_1"
 RULESET_VERSION = os.getenv("RULESET_VERSION", "v0.3")
 WORKER_VERSION = os.getenv("WORKER_VERSION", APP_VERSION)
@@ -113,6 +113,8 @@ class Candidate(BaseModel):
 
 class Decision(BaseModel):
     decision: Literal["TRADE", "WAIT", "NO_TRADE"]
+    operational_state: Literal["HOLD_UNRESOLVED", "WAITING_FOR_TRIGGER", "TRADE_READY", "REJECTED"]
+    reason_code: str
     reasons: list[str]
     qty: int | None = None
     risk_per_share: Decimal | None = None
@@ -166,44 +168,44 @@ def size_position(entry: Decimal, risk_per_share: Decimal):
 
 def evaluate(c: Candidate) -> Decision:
     if c.experiment_class != "STRATEGY_1":
-        return Decision(decision="NO_TRADE", reasons=["Infrastructure tests are not Strategy #1 decisions."])
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="INFRASTRUCTURE_TEST", reasons=["Infrastructure tests are not Strategy #1 decisions."])
     if c.ruleset_version != RULESET_VERSION:
         return Decision(
-            decision="NO_TRADE",
+            decision="NO_TRADE", operational_state="REJECTED", reason_code="RULESET_MISMATCH",
             reasons=[f"Ruleset mismatch: input={c.ruleset_version}, worker={RULESET_VERSION}."],
         )
 
     if c.catalyst_tier is None or c.catalyst_summary is None:
-        return Decision(decision="NO_TRADE", reasons=["No identifiable catalyst."])
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="NO_CATALYST", reasons=["No identifiable catalyst."])
     if c.catalyst_tier == "C":
-        return Decision(decision="NO_TRADE", reasons=["Tier C catalyst is insufficient for Strategy #1."])
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="CATALYST_TIER_C", reasons=["Tier C catalyst is insufficient for Strategy #1."])
     if c.catalyst_material is False:
-        return Decision(decision="NO_TRADE", reasons=["Catalyst is explicitly non-material."])
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="CATALYST_NON_MATERIAL", reasons=["Catalyst is explicitly non-material."])
     if c.stop_would_widen is True:
-        return Decision(decision="NO_TRADE", reasons=["Trade would require widening the structural stop."])
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="STOP_WIDENING", reasons=["Trade would require widening the structural stop."])
     if c.fomo_or_revenge_motive is True:
-        return Decision(decision="NO_TRADE", reasons=["Entry motive is FOMO/revenge rather than the predefined setup."])
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="FOMO_REVENGE", reasons=["Entry motive is FOMO/revenge rather than the predefined setup."])
     if c.missed_trigger is True:
-        return Decision(decision="NO_TRADE", reasons=["Planned trigger was missed; chasing is prohibited."])
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="MISSED_TRIGGER", reasons=["Planned trigger was missed; chasing is prohibited."])
     if c.price_extended_or_chasing is True:
-        return Decision(decision="NO_TRADE", reasons=["Price is extended / entry would require chasing."])
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="PRICE_EXTENDED_OR_CHASING", reasons=["Price is extended / entry would require chasing."])
     if c.major_macro_event_imminent is True:
-        return Decision(decision="NO_TRADE", reasons=["Major scheduled macro event is imminent."])
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="MACRO_EVENT_IMMINENT", reasons=["Major scheduled macro event is imminent."])
     if c.realized_daily_loss_dollars is not None and c.realized_daily_loss_dollars >= MAX_DAILY_LOSS_DOLLARS:
-        return Decision(decision="NO_TRADE", reasons=["Daily loss limit has been reached."])
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="DAILY_LOSS_LIMIT", reasons=["Daily loss limit has been reached."])
     if c.executed_trades_today is not None and c.executed_trades_today >= MAX_TRADES_PER_DAY:
-        return Decision(decision="NO_TRADE", reasons=["Maximum executed trades per day has been reached."])
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="DAILY_TRADE_LIMIT", reasons=["Maximum executed trades per day has been reached."])
 
     geometry = calc_geometry(c)
     if geometry == "INVALID":
-        return Decision(decision="NO_TRADE", reasons=["Entry/stop/target geometry is invalid for the direction."])
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="INVALID_GEOMETRY", reasons=["Entry/stop/target geometry is invalid for the direction."])
 
     risk_per_share = planned_rr = None
     if geometry is not None:
         risk_per_share, _reward, planned_rr = geometry
         if planned_rr < Decimal("1.5"):
             return Decision(
-                decision="NO_TRADE",
+                decision="NO_TRADE", operational_state="REJECTED", reason_code="RR_BELOW_MINIMUM",
                 reasons=[f"Planned reward/risk {planned_rr:.3f}R is below the 1.5R minimum."],
                 risk_per_share=risk_per_share,
                 planned_rr=planned_rr,
@@ -232,77 +234,86 @@ def evaluate(c: Candidate) -> Decision:
     }
     missing = [name for name, value in unresolved.items() if value is None]
     if missing:
-        return Decision(decision="WAIT", reasons=["Required structured inputs unresolved: " + ", ".join(missing) + "."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="STRUCTURED_INPUTS_UNRESOLVED", reasons=["Required structured inputs unresolved: " + ", ".join(missing) + "."])
 
     if c.market_context_ok is False:
-        return Decision(decision="WAIT", reasons=["Market context is currently hostile / not approved."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="MARKET_CONTEXT_NOT_APPROVED", reasons=["Market context is currently hostile / not approved."])
     if c.data_quality_ok is False:
-        return Decision(decision="WAIT", reasons=["Required market data is stale, contradictory, or unreliable."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="DATA_QUALITY_FAILED", reasons=["Required market data is stale, contradictory, or unreliable."])
     if c.consolidated_data_required is True and c.consolidated_data is not True:
-        return Decision(decision="WAIT", reasons=["Required consolidated market data is unavailable."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="CONSOLIDATED_DATA_UNAVAILABLE", reasons=["Required consolidated market data is unavailable."])
     if c.liquidity_ok is False:
-        return Decision(decision="NO_TRADE", reasons=["Liquidity / execution quality is unacceptable."])
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="LIQUIDITY_FAILED", reasons=["Liquidity / execution quality is unacceptable."])
     if c.participation_ok is False:
-        return Decision(decision="WAIT", reasons=["Required participation is not confirmed."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="PARTICIPATION_NOT_CONFIRMED", reasons=["Required participation is not confirmed."])
     if c.relative_strength_ok is False:
-        return Decision(decision="WAIT", reasons=["Required relative strength/weakness is not confirmed."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="RELATIVE_STRENGTH_NOT_CONFIRMED", reasons=["Required relative strength/weakness is not confirmed."])
     if c.catalyst_verified is False or c.catalyst_cross_source_verified is False:
-        return Decision(decision="WAIT", reasons=["Catalyst verification is incomplete."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="CATALYST_VERIFICATION_INCOMPLETE", reasons=["Catalyst verification is incomplete."])
     if not c.materiality_rationale:
-        return Decision(decision="WAIT", reasons=["Catalyst materiality rationale is missing."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="MATERIALITY_RATIONALE_MISSING", reasons=["Catalyst materiality rationale is missing."])
     if len(c.catalyst_sources) < 2:
-        return Decision(decision="WAIT", reasons=["Cross-source catalyst evidence is incomplete."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="CATALYST_EVIDENCE_INCOMPLETE", reasons=["Cross-source catalyst evidence is incomplete."])
     if c.after_first_minute is False:
-        return Decision(decision="WAIT", reasons=["Strategy #1 cannot trade during the first minute after the open."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="FIRST_MINUTE_RESTRICTION", reasons=["Strategy #1 cannot trade during the first minute after the open."])
 
     if c.entry_model not in APPROVED_ENTRY_MODELS:
-        return Decision(decision="WAIT", reasons=["Approved entry model is not yet specified."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="ENTRY_MODEL_MISSING_OR_UNAPPROVED", reasons=["Approved entry model is not yet specified."])
     if not c.trigger_definition:
-        return Decision(decision="WAIT", reasons=["Predefined trigger is not specified."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="TRIGGER_DEFINITION_MISSING", reasons=["Predefined trigger is not specified."])
     if c.trigger_price is None:
-        return Decision(decision="WAIT", reasons=["Predefined trigger price is not specified."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="TRIGGER_PRICE_MISSING", reasons=["Predefined trigger price is not specified."])
     if c.data_timestamp is None:
-        return Decision(decision="WAIT", reasons=["Fresh market-data timestamp is missing."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="DATA_TIMESTAMP_MISSING", reasons=["Fresh market-data timestamp is missing."])
     if c.entry_price is None or c.stop_price is None or c.target_price is None:
-        return Decision(decision="WAIT", reasons=["Entry, structural stop, and target must be predefined."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="SETUP_GEOMETRY_MISSING", reasons=["Entry, structural stop, and target must be predefined."])
     if geometry is None:
-        return Decision(decision="WAIT", reasons=["Trade geometry is incomplete."])
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="GEOMETRY_INCOMPLETE", reasons=["Trade geometry is incomplete."])
 
     risk_per_share, _reward, planned_rr = geometry
 
     if Decimal("1.5") <= planned_rr < Decimal("2.0"):
         if c.clean_structure is None:
             return Decision(
-                decision="WAIT",
+                decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="CLEAN_STRUCTURE_UNRESOLVED",
                 reasons=["1.5R-2.0R setup requires explicit clean_structure input; criterion is not inferred."],
                 risk_per_share=risk_per_share,
                 planned_rr=planned_rr,
             )
         if c.clean_structure is False:
             return Decision(
-                decision="NO_TRADE",
+                decision="NO_TRADE", operational_state="REJECTED", reason_code="CLEAN_STRUCTURE_FAILED",
                 reasons=["1.5R-2.0R setup does not satisfy the clean-structure requirement."],
                 risk_per_share=risk_per_share,
                 planned_rr=planned_rr,
             )
 
     if not c.trigger_confirmed:
+        # Classification only: preserve the existing decision and reason precedence.
+        wait_state = "WAITING_FOR_TRIGGER"
+        wait_code = "TRIGGER_NOT_CONFIRMED"
+        if c.target_validated is not True:
+            wait_state, wait_code = "HOLD_UNRESOLVED", "TARGET_NOT_VALIDATED"
+        elif c.journal_trade_id is None or not c.journal_trade_id.strip():
+            wait_state, wait_code = "HOLD_UNRESOLVED", "JOURNAL_TRADE_ID_MISSING"
+        elif size_position(c.entry_price, risk_per_share) is None:
+            wait_state, wait_code = "HOLD_UNRESOLVED", "POSITION_SIZE_UNAVAILABLE"
         return Decision(
-            decision="WAIT",
+            decision="WAIT", operational_state=wait_state, reason_code=wait_code,
             reasons=["Predefined trigger has not confirmed prospectively."],
             risk_per_share=risk_per_share,
             planned_rr=planned_rr,
         )
     if c.triggered_at is None:
         return Decision(
-            decision="WAIT",
+            decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="TRIGGER_TIMESTAMP_MISSING",
             reasons=["Prospective trigger confirmation timestamp is missing."],
             risk_per_share=risk_per_share,
             planned_rr=planned_rr,
         )
     if c.journal_trade_id is None or not c.journal_trade_id.strip():
         return Decision(
-            decision="WAIT",
+            decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="JOURNAL_TRADE_ID_MISSING",
             reasons=["Unique journal_trade_id is required before a prospective TRADE signal."],
             risk_per_share=risk_per_share,
             planned_rr=planned_rr,
@@ -311,7 +322,7 @@ def evaluate(c: Candidate) -> Decision:
     sizing = size_position(c.entry_price, risk_per_share)
     if sizing is None:
         return Decision(
-            decision="NO_TRADE",
+            decision="NO_TRADE", operational_state="REJECTED", reason_code="POSITION_SIZE_UNAVAILABLE",
             reasons=["Risk/notional ceilings do not permit a positive share quantity."],
             risk_per_share=risk_per_share,
             planned_rr=planned_rr,
@@ -319,7 +330,7 @@ def evaluate(c: Candidate) -> Decision:
 
     qty, dollar_risk, notional = sizing
     return Decision(
-        decision="TRADE",
+        decision="TRADE", operational_state="TRADE_READY", reason_code="ALL_CONDITIONS_SATISFIED",
         reasons=["All currently required Strategy #1 v0.3 shadow-evaluation conditions are satisfied."],
         qty=qty,
         risk_per_share=risk_per_share,
@@ -397,6 +408,8 @@ def write_supabase(c: Candidate, d: Decision) -> str:
             ),
             "executed_trades_today": c.executed_trades_today,
             "worker_reasons": d.reasons,
+            "operational_state": d.operational_state,
+            "reason_code": d.reason_code,
         },
         "journal_trade_id": c.journal_trade_id,
         "notes": c.notes,
@@ -432,6 +445,7 @@ def health():
         "strategy_id": STRATEGY_ID,
         "ruleset_version": RULESET_VERSION,
         "worker_version": WORKER_VERSION,
+        "app_version": APP_VERSION,
         "broker_execution_enabled": False,
     }
 
