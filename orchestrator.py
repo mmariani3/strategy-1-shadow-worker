@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field, model_validator
 
-APP_VERSION = "0.3.0-shadow-orchestrator"
+APP_VERSION = "0.4.0-shadow-orchestrator"
 RULESET_VERSION = os.getenv("RULESET_VERSION", "v0.3")
 ORCHESTRATOR_TOKEN = os.getenv("ORCHESTRATOR_TOKEN")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -554,3 +554,163 @@ def confirm_trigger(candidate_id: str, confirmation: ConfirmationIn,
     write_event(c["id"], "TRIGGER_CONFIRMED", data_timestamp=confirmation.data_timestamp.isoformat(),
                 payload={"confirmation_source": confirmation.confirmation_source})
     return evaluate_stored(c)
+
+
+# Journal writes use the connected Google account. These authenticated endpoints
+# supply a validated projection and reconcile freshly read Sheet rows by ID.
+JOURNAL_SPREADSHEET_ID = "1C4BAHQBzgU2hC64yIAHfQkwjSIuPm3pc7i-AIKrbk4w"
+ENTRY_LABELS = {
+    "opening_range_premarket_high_break": "Opening-range / premarket high break",
+    "vwap_reclaim_rejection": "VWAP reclaim / rejection",
+    "first_clean_pullback": "First clean pullback",
+}
+
+
+def journal_projection(c: dict[str, Any], item: dict[str, Any] | None,
+                       run: dict[str, Any] | None, signal: dict[str, Any]):
+    inputs = signal.get("decision_inputs") or {}
+    if (signal.get("id") != c.get("last_signal_id")
+        or inputs.get("candidate_id") != c["id"]
+        or not c.get("journal_trade_id")
+        or signal.get("journal_trade_id") != c["journal_trade_id"]
+        or signal.get("decision") != c.get("last_worker_decision")
+        or signal.get("symbol") != c["symbol"]
+        or signal.get("ruleset_version") != c["ruleset_version"]):
+        raise HTTPException(status_code=409, detail="Candidate/signal traceability is incomplete or inconsistent.")
+    if not c.get("operational_state") or c.get("reason_code") == "EVALUATION_PENDING":
+        raise HTTPException(status_code=409, detail="Candidate requires a completed prospective evaluation.")
+    if c.get("source_discovery_item_id") and (
+        not item or item.get("id") != c["source_discovery_item_id"]
+        or item.get("symbol") != c["symbol"] or not run
+        or item.get("run_id") != run.get("id")
+        or run.get("session_date") != c["session_date"]):
+        raise HTTPException(status_code=409, detail="Discovery run/item/candidate traceability is incomplete.")
+    setup_ready = all(c.get(k) is not None for k in
+                      ("trigger_price", "trigger_operator", "entry_price", "stop_price", "target_price"))
+    setup_ready = setup_ready and c.get("entry_model") in ENTRY_LABELS and bool(c.get("trigger_definition"))
+    decision = {"NO_TRADE": "NO TRADE", "WAIT": "WAIT", "TRADE": "TRADE"}[signal["decision"]]
+    reasons = signal.get("wait_reasons") or signal.get("rejection_reasons") or []
+    notes = c.get("notes") or ""
+    trace = {"run_id": run.get("id") if run else None,
+             "discovery_item_id": c.get("source_discovery_item_id"), "candidate_id": c["id"],
+             "signal_id": signal["id"], "journal_trade_id": c["journal_trade_id"],
+             "lifecycle_revision": c.get("lifecycle_revision", 0)}
+    rows = [{"sheet_name": "Premarket Candidates", "key_column": "Candidate ID",
+             "key": c["id"], "values": {
+        "Date": c["session_date"], "Discovery Phase": "Premarket" if c["discovery_phase"] == "PREMARKET" else "Post-Open Refresh",
+        "Ticker": c["symbol"], "Catalyst Summary": c["catalyst_summary"],
+        "Catalyst Tier": c["catalyst_tier"], "Ruleset Version": c["ruleset_version"],
+        "Planned Entry Model": ENTRY_LABELS.get(c.get("entry_model"), "TBD / None"),
+        "Trigger / Level": c.get("trigger_definition") or "",
+        "Candidate ID": c["id"], "Signal ID": signal["id"], "Operational State": c["operational_state"],
+        "Setup Status": "WORKER_READY" if setup_ready else "SETUP_REQUIRED",
+        "Worker Decision": decision, "Final Decision": decision,
+        "Wait / Block Reason": c["reason_code"] + (": " + " | ".join(reasons) if reasons else ""),
+        "Notes": notes,
+    }}, {"sheet_name": "Signal Queue", "key_column": "Signal ID", "key": signal["id"], "values": {
+        "Signal ID": signal["id"], "Created At": signal.get("created_at") or signal["evaluated_at"],
+        "Decision": decision, "Status": signal["status"], "Symbol": c["symbol"],
+        "Direction": c["direction"], "Qty": signal.get("qty"), "Entry Price": signal.get("entry_price"),
+        "Stop Price": signal.get("stop_price"), "Target Price": signal.get("target_price"),
+        "Triggered At": signal.get("triggered_at"), "Ruleset Version": c["ruleset_version"],
+        "Entry Model": c.get("entry_model"), "Market Data Source": signal.get("market_data_source"),
+        "Journal Trade ID": c["journal_trade_id"], "Notes": notes,
+    }}]
+    if run:
+        # Do not manufacture channel coverage, liquidity counts, or watchlist totals.
+        rows.append({"sheet_name": "Scan Coverage", "key_column": "Run ID", "key": run["id"], "values": {
+            "Date": run["session_date"], "Scan Status": {"COMPLETE": "Complete", "PARTIAL": "Partial", "DATA_UNAVAILABLE": "Data Unavailable"}.get(run["status"], "Partial"),
+            "Candidates Discovered": run.get("candidates_discovered"),
+            "Ruleset Version": run["ruleset_version"], "Notes": run.get("notes") or "", "Run ID": run["id"],
+        }})
+    return {"mode": "SHADOW", "broker_execution_enabled": False,
+            "spreadsheet_id": JOURNAL_SPREADSHEET_ID, "trace": trace, "rows": rows,
+            "trade_journal_write_enabled": False}
+
+
+def load_journal_projection(candidate_id: str):
+    c = get_candidate(candidate_id)
+    signals = sb_select("strategy_signals", {"select": "*", "id": f"eq.{c.get('last_signal_id')}", "limit": "1"}) if c.get("last_signal_id") else []
+    if not signals:
+        raise HTTPException(status_code=409, detail="Worker signal is the first missing artifact.")
+    item, run = None, None
+    if c.get("source_discovery_item_id"):
+        items = sb_select("strategy_discovery_items", {"select": "*", "id": f"eq.{c['source_discovery_item_id']}", "limit": "1"})
+        item = items[0] if items else None
+        runs = sb_select("strategy_discovery_runs", {"select": "*", "id": f"eq.{item['run_id']}", "limit": "1"}) if item else []
+        run = runs[0] if runs else None
+    result = journal_projection(c, item, run, signals[0])
+    # A concurrent lifecycle update invalidates this projection; the writer must
+    # request a new plan immediately before applying a Sheets write.
+    if get_candidate(candidate_id).get("lifecycle_revision", 0) != c.get("lifecycle_revision", 0):
+        raise HTTPException(status_code=409, detail="Candidate changed during journal read; retry projection.")
+    return result
+
+
+class JournalRowIn(BaseModel):
+    model_config = {"extra": "forbid"}
+    row_number: int = Field(ge=2, le=1000)
+    values: dict[str, Any]
+
+
+class JournalSnapshotIn(BaseModel):
+    model_config = {"extra": "forbid"}
+    sheet_name: Literal["Premarket Candidates", "Scan Coverage", "Signal Queue"]
+    headers: list[str]
+    rows: list[JournalRowIn] = Field(max_length=999)
+    empty_row_number: int = Field(ge=2, le=1000)
+
+
+class JournalReconcileIn(BaseModel):
+    model_config = {"extra": "forbid"}
+    candidate_id: str
+    spreadsheet_id: Literal["1C4BAHQBzgU2hC64yIAHfQkwjSIuPm3pc7i-AIKrbk4w"]
+    lifecycle_revision: int = Field(ge=0)
+    snapshots: list[JournalSnapshotIn] = Field(min_length=2, max_length=3)
+
+
+def reconcile_journal(projection, request: JournalReconcileIn):
+    if request.lifecycle_revision != projection["trace"]["lifecycle_revision"]:
+        raise HTTPException(status_code=409, detail="Candidate revision changed before journal write.")
+    snapshots = {s.sheet_name: s for s in request.snapshots}
+    if len(snapshots) != len(request.snapshots):
+        raise HTTPException(status_code=422, detail="Duplicate sheet snapshots.")
+    patches = []
+    for desired in projection["rows"]:
+        snapshot = snapshots.get(desired["sheet_name"])
+        if not snapshot or len(snapshot.headers) != len(set(snapshot.headers)) or not set(desired["values"]).issubset(snapshot.headers):
+            raise HTTPException(status_code=409, detail="Journal schema is missing required headers or has duplicates.")
+        if len({r.row_number for r in snapshot.rows}) != len(snapshot.rows):
+            raise HTTPException(status_code=422, detail="Duplicate row numbers in snapshot.")
+        matches = [r for r in snapshot.rows if r.values.get(desired["key_column"]) == desired["key"]]
+        if len(matches) > 1:
+            raise HTTPException(status_code=409, detail="Duplicate journal IDs require reconciliation; no write planned.")
+        existing = matches[0] if matches else None
+        target = existing.row_number if existing else snapshot.empty_row_number
+        if not existing and any(r.row_number == target and any(v is not None and v != "" for v in r.values.values()) for r in snapshot.rows):
+            raise HTTPException(status_code=409, detail="Planned insertion row is occupied.")
+        values = desired["values"].copy()
+        if existing:
+            for identity in ("Date", "Ticker", "Symbol", "Journal Trade ID", "Ruleset Version"):
+                if existing.values.get(identity) not in (None, "", values.get(identity)) and identity in values:
+                    raise HTTPException(status_code=409, detail="Journal row identity conflicts with source records.")
+            # Notes remain user owned after insertion; signal history remains one row per signal ID.
+            values.pop("Notes", None)
+            values = {k: v for k, v in values.items() if existing.values.get(k) != v}
+        patches.append({"sheet_name": desired["sheet_name"], "row_number": target,
+                        "key_column": desired["key_column"], "key": desired["key"],
+                        "action": "INSERT" if not existing else "UPDATE" if values else "NOOP", "values": values})
+    return {**{k: v for k, v in projection.items() if k != "rows"}, "patches": patches,
+            "write_transport": "CONNECTED_GOOGLE_ACCOUNT", "requires_live_read_before_write": True}
+
+
+@app.get("/journal/candidates/{candidate_id}")
+def get_journal_projection(candidate_id: str, credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme)):
+    require_auth(credentials)
+    return load_journal_projection(candidate_id)
+
+
+@app.post("/journal/reconcile")
+def plan_journal_reconciliation(request: JournalReconcileIn, credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme)):
+    require_auth(credentials)
+    return reconcile_journal(load_journal_projection(request.candidate_id), request)
