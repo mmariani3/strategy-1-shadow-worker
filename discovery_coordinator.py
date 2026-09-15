@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field, model_validator
 
-APP_VERSION = "0.7.0-shadow-discovery"
+APP_VERSION = "0.8.0-shadow-discovery"
 RULESET_VERSION = os.getenv("RULESET_VERSION", "v0.3")
 
 DISCOVERY_SERVICE_TOKEN = os.getenv("DISCOVERY_SERVICE_TOKEN")
@@ -764,6 +764,7 @@ class CatalystSourceIn(BaseModel):
 
 
 class PromoteRequest(BaseModel):
+    setup_rationale: str | None = None
     direction: Literal[
         "LONG",
         "SHORT",
@@ -1194,251 +1195,219 @@ def latest_run(
     }
 
 
-@app.post("/items/{item_id}/promote")
-def promote(
-    item_id: str,
-    review: PromoteRequest,
-    credentials: HTTPAuthorizationCredentials | None = Security(
-        bearer
-    ),
-):
-    require_auth(credentials)
 
-    if not ORCHESTRATOR_TOKEN:
-        raise HTTPException(
-            status_code=503,
-            detail="ORCHESTRATOR_TOKEN is not configured.",
-        )
+class QualificationRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    direction: Literal["LONG", "SHORT"]
+    catalyst_summary: str = Field(min_length=1)
+    catalyst_tier: Literal["A", "B"]
+    catalyst_material: Literal[True]
+    materiality_rationale: str = Field(min_length=1)
+    catalyst_verified: Literal[True]
+    catalyst_cross_source_verified: Literal[True]
+    catalyst_sources: list[CatalystSourceIn] = Field(min_length=2)
 
-    items = sb_select(
-        "strategy_discovery_items",
-        {
-            "select": "*",
-            "id": f"eq.{item_id}",
-            "limit": "1",
-        },
-    )
+    @model_validator(mode="after")
+    def validate_review(self):
+        if not self.catalyst_summary.strip() or not self.materiality_rationale.strip():
+            raise ValueError("Catalyst summary and materiality rationale must be nonblank.")
+        if any(not s.source.strip() or not s.source_type.strip() or
+               not s.headline_or_event.strip() or s.event_timestamp.tzinfo is None
+               for s in self.catalyst_sources):
+            raise ValueError("Evidence requires nonblank source fields and timezone-aware timestamps.")
+        if len({s.source.strip().casefold() for s in self.catalyst_sources}) < 2:
+            raise ValueError("Cross-source review requires two distinct named sources.")
+        return self
 
+
+class SetupRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    setup_rationale: str = Field(min_length=1)
+    market_data_source: str = Field(min_length=1)
+    entry_model: Literal["opening_range_premarket_high_break",
+                         "vwap_reclaim_rejection", "first_clean_pullback"]
+    trigger_definition: str = Field(min_length=1)
+    trigger_price: Decimal = Field(gt=0)
+    trigger_operator: Literal["GTE", "LTE"]
+    entry_price: Decimal = Field(gt=0)
+    stop_price: Decimal = Field(gt=0)
+    target_price: Decimal = Field(gt=0)
+    consolidated_data: bool | None = None
+    consolidated_data_required: bool | None = None
+    market_regime: Literal["Bullish", "Bearish", "Mixed", "Choppy"] | None = None
+    market_context_ok: bool | None = None
+    liquidity_ok: bool | None = None
+    participation_ok: bool | None = None
+    relative_strength_ok: bool | None = None
+    price_extended_or_chasing: bool | None = None
+    major_macro_event_imminent: bool | None = None
+    stop_would_widen: bool | None = None
+    fomo_or_revenge_motive: bool | None = None
+    target_validated: bool | None = None
+    clean_structure: bool | None = None
+    realized_daily_loss_dollars: Decimal | None = None
+    executed_trades_today: int | None = None
+    after_first_minute: bool | None = None
+    missed_trigger: bool | None = None
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_setup(self):
+        if any(not value.strip() for value in
+               (self.setup_rationale, self.market_data_source, self.trigger_definition)):
+            raise ValueError("Setup rationale, data source, and trigger definition must be nonblank.")
+        return self
+
+
+def discovery_context(item_id: str):
+    from uuid import UUID
+    try:
+        UUID(item_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="item_id must be a UUID.")
+    items = sb_select("strategy_discovery_items",
+                      {"select": "*", "id": f"eq.{item_id}", "limit": "1"})
     if not items:
-        raise HTTPException(
-            status_code=404,
-            detail="Discovery item not found.",
-        )
-
+        raise HTTPException(status_code=404, detail="Discovery item not found.")
     item = items[0]
-
-    runs = sb_select(
-        "strategy_discovery_runs",
-        {
-            "select": "*",
-            "id": f"eq.{item['run_id']}",
-            "limit": "1",
-        },
-    )
-
+    runs = sb_select("strategy_discovery_runs",
+                     {"select": "*", "id": f"eq.{item['run_id']}", "limit": "1"})
     if not runs:
-        raise HTTPException(
-            status_code=404,
-            detail="Discovery run not found.",
-        )
-
-    run = runs[0]
+        raise HTTPException(status_code=404, detail="Discovery run not found.")
+    return item, runs[0]
 
 
-    summary = None
 
-    if item.get("news_evidence"):
-        summary = item["news_evidence"][0].get(
-            "headline_or_event"
-        )
-
-    if not summary:
-        summary = (
-            f"Reviewed catalyst evidence "
-            f"for {item['symbol']}"
-        )
-
-    is_infrastructure_test = (
-        "INFRASTRUCTURE_TEST" in (run.get("notes") or "")
-    )
-
-    body = {
-        "experiment_class": (
-            "INFRASTRUCTURE_TEST"
-            if is_infrastructure_test
-            else "STRATEGY_1"
-        ),
-        "source_discovery_item_id": item_id,
-        "session_date": run["session_date"],
-        "discovery_phase": run["phase"],
-        "symbol": item["symbol"],
-        "direction": review.direction,
-        "ruleset_version": RULESET_VERSION,
-        "market_data_source": (
-            review.market_data_source
-        ),
-        "consolidated_data": (
-            review.consolidated_data
-        ),
-        "consolidated_data_required": (
-            review.consolidated_data_required
-        ),
-        "market_regime": review.market_regime,
-        "market_context_ok": (
-            review.market_context_ok
-        ),
-        "liquidity_ok": review.liquidity_ok,
-        "participation_ok": (
-            review.participation_ok
-        ),
-        "relative_strength_ok": (
-            review.relative_strength_ok
-        ),
-        "price_extended_or_chasing": (
-            review.price_extended_or_chasing
-        ),
-        "major_macro_event_imminent": (
-            review.major_macro_event_imminent
-        ),
-        "stop_would_widen": (
-            review.stop_would_widen
-        ),
-        "fomo_or_revenge_motive": (
-            review.fomo_or_revenge_motive
-        ),
-        "target_validated": (
-            review.target_validated
-        ),
-        "clean_structure": (
-            review.clean_structure
-        ),
-        "catalyst_summary": summary,
-        "catalyst_tier": review.catalyst_tier,
-        "catalyst_event_at": (
-            review.catalyst_sources[
-                0
-            ].event_timestamp.isoformat()
-        ),
-        "catalyst_material": (
-            review.catalyst_material
-        ),
-        "materiality_rationale": (
-            review.materiality_rationale
-        ),
-        "catalyst_verified": (
-            review.catalyst_verified
-        ),
-        "catalyst_cross_source_verified": (
-            review.catalyst_cross_source_verified
-        ),
-        "catalyst_sources": [
-            source.model_dump(
-                mode="json"
-            )
-            for source
-            in review.catalyst_sources
-        ],
-        "entry_model": review.entry_model,
-        "trigger_definition": (
-            review.trigger_definition
-        ),
-        "trigger_price": str(
-            review.trigger_price
-        ),
-        "trigger_operator": (
-            review.trigger_operator
-        ),
-        "entry_price": str(
-            review.entry_price
-        ),
-        "stop_price": str(
-            review.stop_price
-        ),
-        "target_price": str(
-            review.target_price
-        ),
-        "realized_daily_loss_dollars": (
-            str(
-                review.realized_daily_loss_dollars
-            )
-            if review.realized_daily_loss_dollars
-            is not None
-            else None
-        ),
-        "executed_trades_today": (
-            review.executed_trades_today
-        ),
-        "after_first_minute": (
-            review.after_first_minute
-        ),
-        "missed_trigger": (
-            review.missed_trigger
-        ),
-        "notes": (
-            (review.notes or "")
-            + (
-                " | INFRASTRUCTURE_TEST promotion path validation"
-                if is_infrastructure_test
-                else ""
-            )
-            + f" | Promoted from discovery item "
-            f"{item_id}"
-        ),
-    }
-
-    wait_for_dependency(
-        ORCHESTRATOR_URL,
-        "Shadow Orchestrator",
-    )
-
-    r = requests.post(
-        (
-            f"{ORCHESTRATOR_URL.rstrip('/')}"
-            "/candidates/ingest"
-        ),
-        headers={
-            "Authorization": (
-                f"Bearer {ORCHESTRATOR_TOKEN}"
-            ),
-            "Content-Type": "application/json",
-        },
-        json=body,
-        timeout=(5, 45),
-    )
-
+def reserve_artifact(item_id: str, column: str, record: dict[str, Any]):
+    """Claim an immutable artifact atomically; conflicting concurrent writes fail closed."""
+    r = requests.patch(f"{SUPABASE_URL.rstrip('/')}/rest/v1/strategy_discovery_items",
+                       headers=sb_headers(),
+                       params={"id": f"eq.{item_id}", column: "is.null",
+                               "promotion_status": "not.in.(PROMOTED,REJECTED)"},
+                       json=record, timeout=20)
     if not r.ok:
-        raise HTTPException(
-            status_code=502,
-            detail=(
-                "Orchestrator promotion failed: "
-                f"{r.status_code} "
-                f"{r.text[:500]}"
-            ),
-        )
+        raise HTTPException(status_code=502, detail="Artifact persistence failed.")
+    rows = r.json()
+    if len(rows) != 1:
+        raise HTTPException(status_code=409, detail="Item changed concurrently; re-read and retry the same request.")
+    return rows[0]
 
+def qualify_item(item_id: str, review: QualificationRequest):
+    item, run = discovery_context(item_id)
+    payload = review.model_dump(mode="json")
+    existing = item.get("qualification_review")
+    if existing is not None:
+        if existing != payload:
+            raise HTTPException(status_code=409, detail="Qualification already recorded; conflicting review rejected.")
+        return {"discovery_item_id": item_id, "run_id": run["id"],
+                "operational_state": item.get("operational_state"),
+                "setup_status": "PREDEFINED" if item.get("setup_review") else "SETUP_REQUIRED",
+                "candidate_id": item.get("orchestrator_candidate_id"), "idempotent_replay": True}
+    if item.get("promotion_status") in ("PROMOTED", "REJECTED"):
+        raise HTTPException(status_code=409, detail="Terminal discovery item cannot be qualified.")
+    reserve_artifact(item_id, "qualification_review", {
+        "qualification_review": payload, "operational_state": "WATCHLIST_CANDIDATE",
+        "provisional_tier": review.catalyst_tier, "verification_status": "VERIFIED",
+        "materiality_rationale": review.materiality_rationale,
+        "promotion_status": "ELIGIBLE_FOR_ORCHESTRATOR",
+    })
+    return {"discovery_item_id": item_id, "run_id": run["id"],
+            "operational_state": "WATCHLIST_CANDIDATE", "setup_status": "SETUP_REQUIRED",
+            "candidate_id": None, "idempotent_replay": False}
+
+
+def construct_setup(item_id: str, setup: SetupRequest):
+    item, run = discovery_context(item_id)
+    if not item.get("qualification_review") or item.get("promotion_status") == "REJECTED":
+        raise HTTPException(status_code=409, detail="Explicit catalyst qualification is required before setup.")
+    review = QualificationRequest.model_validate(item["qualification_review"])
+    geometry = (setup.entry_price - setup.stop_price, setup.target_price - setup.entry_price)
+    if review.direction == "SHORT":
+        geometry = (setup.stop_price - setup.entry_price, setup.entry_price - setup.target_price)
+    if any(value <= 0 for value in geometry):
+        raise HTTPException(status_code=422, detail="Invalid directional entry/stop/target geometry.")
+    payload = setup.model_dump(mode="json")
+    if item.get("setup_review") is not None and item["setup_review"] != payload:
+        raise HTTPException(status_code=409, detail="Setup already recorded; conflicting setup rejected.")
+    if item.get("promotion_status") == "PROMOTED":
+        if not item.get("orchestrator_candidate_id"):
+            raise HTTPException(status_code=502, detail="Promoted item is missing its candidate link.")
+        return {"discovery_item_id": item_id, "run_id": run["id"],
+                "operational_state": "WORKER_READY", "setup_status": "PREDEFINED",
+                "candidate_id": item["orchestrator_candidate_id"], "idempotent_replay": True}
+    if not ORCHESTRATOR_TOKEN:
+        raise HTTPException(status_code=503, detail="ORCHESTRATOR_TOKEN is not configured.")
+    # Persist the explicit setup before handoff. WORKER_READY never means TRADE.
+    if item.get("setup_review") is None:
+        reserve_artifact(item_id, "setup_review",
+                         {"setup_review": payload, "operational_state": "WORKER_READY"})
+    infrastructure = "INFRASTRUCTURE_TEST" in (run.get("notes") or "")
+    body = {**review.model_dump(mode="json"),
+            **setup.model_dump(mode="json", exclude={"setup_rationale"}),
+            "experiment_class": "INFRASTRUCTURE_TEST" if infrastructure else "STRATEGY_1",
+            "source_discovery_item_id": item_id, "session_date": run["session_date"],
+            "discovery_phase": run["phase"], "symbol": item["symbol"],
+            "ruleset_version": RULESET_VERSION,
+            "catalyst_event_at": review.catalyst_sources[0].event_timestamp.isoformat(),
+            "notes": ((setup.notes or "") + f" | Setup rationale: {setup.setup_rationale}"
+                      + f" | Qualified discovery item {item_id}; run_id={run['id']}"
+                      + (" | INFRASTRUCTURE_TEST" if infrastructure else ""))}
+    wait_for_dependency(ORCHESTRATOR_URL, "Shadow Orchestrator")
+    try:
+        r = requests.post(f"{ORCHESTRATOR_URL.rstrip('/')}/candidates/ingest",
+                          headers={"Authorization": f"Bearer {ORCHESTRATOR_TOKEN}",
+                                   "Content-Type": "application/json"},
+                          json=body, timeout=(5, 45))
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=503, detail="Orchestrator handoff unavailable; explicit setup retained.") from exc
+    if not r.ok:
+        raise HTTPException(status_code=502,
+                            detail=f"Orchestrator setup handoff failed: {r.status_code} {r.text[:500]}")
     result = r.json()
+    from uuid import UUID
+    try:
+        UUID(result.get("candidate_id", ""))
+    except (ValueError, TypeError, AttributeError):
+        raise HTTPException(status_code=502, detail="Orchestrator response missing a valid candidate_id.")
+    sb_update("strategy_discovery_items", item_id,
+              {"promotion_status": "PROMOTED", "orchestrator_candidate_id": result["candidate_id"]})
+    return {"discovery_item_id": item_id, "run_id": run["id"],
+            "operational_state": "WORKER_READY", "setup_status": "PREDEFINED",
+            "candidate_id": result["candidate_id"], "orchestrator": result, "idempotent_replay": False}
 
-    sb_update(
-        "strategy_discovery_items",
-        item_id,
-        {
-            "provisional_tier": (
-                review.catalyst_tier
-            ),
-            "verification_status": (
-                "VERIFIED"
-            ),
-            "materiality_rationale": (
-                review.materiality_rationale
-            ),
-            "promotion_status": "PROMOTED",
-            "orchestrator_candidate_id": (
-                result.get("candidate_id")
-            ),
-        },
-    )
 
-    return {
-        "discovery_item_id": item_id,
-        "orchestrator": result,
-    }
+@app.post("/items/{item_id}/qualify")
+def qualify(item_id: str, review: QualificationRequest,
+            credentials: HTTPAuthorizationCredentials | None = Security(bearer)):
+    require_auth(credentials)
+    return qualify_item(item_id, review)
+
+
+@app.post("/items/{item_id}/setup")
+def setup_item(item_id: str, setup: SetupRequest,
+               credentials: HTTPAuthorizationCredentials | None = Security(bearer)):
+    require_auth(credentials)
+    return construct_setup(item_id, setup)
+
+
+@app.post("/items/{item_id}/promote", deprecated=True)
+def promote(item_id: str, review: PromoteRequest,
+            credentials: HTTPAuthorizationCredentials | None = Security(bearer)):
+    require_auth(credentials)
+    # Legacy combined requests use their explicit notes as the setup rationale.
+    # Both models are validated before qualification has any side effects.
+    from pydantic import ValidationError
+    try:
+        raw = review.model_dump(mode="json")
+        setup = SetupRequest.model_validate({
+            **{name: raw[name] for name in SetupRequest.model_fields if name in raw},
+            "setup_rationale": raw.get("setup_rationale") or raw.get("notes") or "",
+        })
+        qualification = QualificationRequest.model_validate({
+            **{name: raw[name] for name in QualificationRequest.model_fields if name in raw},
+            "catalyst_summary": review.catalyst_sources[0].headline_or_event,
+        })
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail="Combined promotion requires valid catalyst evidence and an explicit setup rationale.") from exc
+    qualify_item(item_id, qualification)
+    return construct_setup(item_id, setup)
