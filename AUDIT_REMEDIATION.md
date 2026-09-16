@@ -1,8 +1,8 @@
 # Phase 1 audit remediation
 
-Base: `edc71cd162078b165f13aaf34262ba6b377520b7` (GitHub main checked again September 15, 2026). This change fixes infrastructure and enforcement gaps. It does not deploy services, apply production SQL, submit orders, write the live Journal, or change historical records.
+Base: `edc71cd162078b165f13aaf34262ba6b377520b7` (GitHub main checked again September 16, 2026). This change fixes infrastructure and enforcement gaps. Deployment and test writes were limited to separately authorized staging; production SQL, services, orders, live Journal, and historical records were not changed.
 
-Follow-up isolated acceptance results and the rollout checklist: [ACCEPTANCE_REPORT.md](ACCEPTANCE_REPORT.md). Acceptance found and fixed a live discovery-state constraint mismatch, a Scan Coverage dropdown mismatch, and Decimal JSON encoding in confirmation reviews. Apply **both** checked-in migrations in filename order. Native database/Google writer acceptance and real local HTTP service integration passed; hosted parity remains unverified.
+Follow-up acceptance results and rollout checklist: [ACCEPTANCE_REPORT.md](ACCEPTANCE_REPORT.md). Acceptance found and fixed a discovery-state constraint mismatch, Scan Coverage dropdown mismatch, Decimal JSON encoding, and legacy Supabase server-key authentication. Apply **both** checked-in migrations in filename order. Native database/Google writer acceptance, real local HTTP lifecycle integration, and bounded hosted transport/RLS/infrastructure-exclusion checks passed. Hosted real-market behavior and journal scheduling remain unverified.
 
 Authority reviewed: living [Strategy Rules v0.3](https://docs.google.com/document/d/1DBtZYKLV0MdIg_f8NspwVLIoeTxCi9amlRFHO9Ji0tM/edit), [Experiment Plan v0.5](https://docs.google.com/document/d/1sfL2FAn-p6peY8LLbEwka_2gYIGiGka_BGe6prsygCc/edit), and [Automation Specification v0.4](https://docs.google.com/document/d/1uDGbnHQHX6tDD9a5efJD-O9FuMW6xvn_xlhCrltlfjw/edit). These masters retain their respective authority. No source files are edited.
 
@@ -71,6 +71,6 @@ All automated writers must use this lock/ledger. Google Sheets offers no transac
 
 - Local code/tests verify SHADOW records and an unconditional disabled broker-submission flag even if the environment says true. No production configuration was changed or verified by these tests.
 - Current risk defaults, approved setups/triggers, stops/targets, v0.3 ruleset and v0.5 experimental methodology remain unchanged. Runtime environment overrides still require independent verification.
-- The live deployed revisions, database migration state, authentication/grants, Google credential access, writer scheduling and end-to-end delivery remain **unverified**. This PR is not production acceptance.
+- Production deployed revisions and configured risk limits were inspected read-only. Credentialed writer acceptance uses a test Sheet and local native database; hosted acceptance uses an isolated Supabase project and three staging services. Production migration deployment, loaded-process settings, writer scheduling, and real-market end-to-end behavior remain unverified. This PR is not production activation approval.
 - Historical synthetic A/C records and old version labels remain untouched. Downstream historical analysis must consult the audit and explicitly reconcile exclusions; this change does not retroactively certify or relabel them.
 - The writer synchronizes current process state; immutable database transitions preserve the detailed history. Existing blank or ambiguous historical trace requires explicit reconciliation, not automatic backfill.

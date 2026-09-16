@@ -101,6 +101,13 @@ def main():
         assert signal['decision_inputs']['reason_code'] == 'INFRASTRUCTURE_TEST'
         events = db('GET', 'strategy_candidate_events', params={'candidate_id': 'eq.' + cid})
         assert events
+        audited = [e for e in events if 'before' in e['payload'] and 'after' in e['payload']]
+        assert audited and all(e['event_at'] and e['payload']['implementation_version']
+                               and e['payload']['owner'] and e['payload']['reason'] for e in audited)
+        discovery_events = db('GET', 'strategy_discovery_events', params={'discovery_item_id': 'eq.' + item})
+        assert ('HOLD_UNRESOLVED' if missing else 'WORKER_READY') in [e['payload'].get('new_state') for e in discovery_events]
+        assert len(db('GET', 'strategy_candidates', params={'source_discovery_item_id': 'eq.' + item})) == 1
+        assert len(db('GET', 'strategy_signals', params={'decision_inputs->>candidate_id': 'eq.' + cid})) == 1
         records.append({'run_id': run, 'item_id': item, 'candidate_id': cid,
                         'signal_id': signal['id'], 'journal_trade_id': signal['journal_trade_id']})
     checks.extend(['qualification does not construct a candidate', 'incomplete infrastructure setup remains ineligible',
@@ -113,6 +120,11 @@ def main():
         assert not c['trigger_confirmed'] and c['operational_state'] == 'REJECTED'
         assert c.get('trigger_observed_at') is None
     checks.append('infrastructure candidates cannot receive market monitoring or confirmation')
+    assert db('GET', 'strategy_candidates', params={'select': 'id'}, headers=public_headers) == []
+    for table in ('strategy_discovery_events', 'journal_deliveries'):
+        denied = requests.get(config['supabase_url'] + '/rest/v1/' + table, headers=public_headers, timeout=30)
+        assert denied.status_code in (401, 403)
+    checks.append('attributable audit history, unique signals, and populated-table RLS')
     print(json.dumps({'status': 'PASSED', 'commit': args.expected_commit, 'checks': checks,
                       'health': health, 'records': records,
                       'limitations': ['No real-market prospective observation', 'No production deployment',

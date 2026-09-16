@@ -2,7 +2,7 @@
 
 ## Result
 
-**Keep the PR in draft; do not merge yet.** Local HTTP service integration, credentialed standalone writer checks, and read-only configured risk-limit verification passed. Hosted Render/Supabase staging parity and loaded-process environment remain unverified. No production code, schema, Journal record, or execution setting was changed.
+**Keep the PR in draft pending production rollout authorization.** Local HTTP service integration, credentialed standalone writer checks, read-only configured risk-limit verification, and bounded hosted staging acceptance passed. Hosted acceptance verifies real transport, RLS, traceability, and infrastructure exclusion; it does not establish real-market prospective behavior or a hosted journal-writer deployment. No production code, schema, Journal record, or execution setting was changed.
 
 ## Review and fixes
 
@@ -14,9 +14,34 @@ The living masters were reread: Strategy Rules v0.3, Experiment Plan v0.5, Autom
 
 ## Evidence
 
+### Hosted staging — September 16, 2026
+
+Three separate Free Render services (Worker, Orchestrator, Discovery) deployed commit `242e33c8fd4aad68f039baeecf9afbc55bfe4843`, with automatic deployment off. Supabase project `cihwmameyylixouggwxk` is a separate $0/month staging project with a schema-only baseline and both PR migrations; no production rows were copied. The attempted database branch was refused because it required Pro; no upgrade or paid branch was created.
+
+The first hosted attempt exposed a compatibility defect: a legacy service-role JWT sent only as `apikey` returned no rows under RLS, so Discovery reported an existing test item missing. The three components now also send a bearer header for JWT-shaped server keys; modern secret-key behavior is unchanged. `tests/test_database_auth.py` covers both formats. The legacy format was verified against hosted Supabase; the modern format was regression-tested locally. The first failed attempt's infrastructure discovery records are preserved.
+
+`tests/hosted_staging_acceptance.py` passed actual Render → Supabase and Discovery → Orchestrator → Worker checks: three SHADOW health endpoints, disabled execution, unauthenticated rejection, publishable-role read/write denial, separate qualification, structured setup handoff, idempotent replay, applicable trace IDs, actual Worker commit/fingerprint, and retained infrastructure classification. Both infrastructure fixtures correctly produce REJECTED/NO_TRADE with reason INFRASTRUCTURE_TEST, never a strategy WAIT or TRADE, and never enter market monitoring. Discovery's intermediate readiness is checked separately in immutable history: missing quality holds; complete structured setup reaches WORKER_READY before the Worker rejects its infrastructure class.
+
+Successful test identities:
+
+| Run | Candidate / discovery item | Signal |
+| --- | --- | --- |
+| `3f377d7c-769f-48e5-bec2-9102487aab5d` | `97176458-9708-4a84-a95a-150700485123` | `5e74ac59-27f6-41c5-a235-addd4b97cefa` |
+| `c55a1406-a8b5-4f04-95d9-cd8dd4e9e3e9` | `c942d732-7259-4299-9b92-55ed7f4bba4b` | `30c85d6b-6774-49f7-b974-c47520baa268` |
+| `ab31c049-296f-44c1-8116-5abf058ffb2e` | `34011b82-25bd-45e2-ad90-29ab0c1c91be` | `572ade0d-bf1f-4fec-956f-63ff94beedd7` |
+| `16243c11-2d37-4f27-8d3b-b0531d15b0e5` | `9888b315-c6d4-46fd-bdf0-6f9f6c7a90b7` | `4250fefa-c74d-475c-86b1-e1bf1130893a` |
+
+All journal IDs follow `S1-20260916-INFRA-<candidate UUID>` and match across candidate/signal records. The final two rows are the expanded acceptance rerun. No Sheet writes occurred during hosted acceptance. No broker credentials, market-data credentials, schedules, execution consumer, or journal writer were provisioned in staging. Orchestrator's IEX default is not evidence of consolidated data availability. Fresh staging error-log inspection returned no error entries.
+
+Supplemental read-only history checks verified one signal per candidate, intermediate readiness states, and database-trigger transitions with timestamps, owner, reason, and implementation version. A direct catalog check confirmed that both anon and authenticated lack SELECT on private audit/ledger tables. Follow-up probes encountered intermittent TLS timeouts/resets; after those transient failures, the expanded full acceptance rerun passed all eleven checks, including populated-table RLS and HTTP denial of private audit/ledger reads. Earlier failed attempts remain documented and their records preserved; continuous availability is not established by a passing test.
+
+The original audit's full lifecycle cases remain established by the isolated quote-injected integration and regression tests, not by these hosted synthetic records. Production loaded-process risk configuration and real-market prospective eligibility remain unverified. The active cleanup reminder reviews staging every 12 hours, with target review by September 16, 10:24 PM Pacific; it is a reminder, not automatic cancellation.
+
+### Earlier isolated and read-only evidence
+
 | Check | Result and scope |
 | --- | --- |
-| Python regression suite | 65 passed. Network blocked for unit tests. |
+| Python regression suite | 67 passed, including both database credential formats. Network blocked for unit tests. |
 | Local service integration | Real authenticated HTTP between Discovery, Orchestrator and Worker, PostgREST 16.3, native PostgreSQL 17.6. Twelve acceptance checks passed; only the quote provider and Supabase key gateway are test adapters. |
 | Configured Worker risk limits | Read-only Render environment inspection: MAX_DOLLAR_RISK=50, MAX_DAILY_LOSS_DOLLARS=100, MAX_TRADES_PER_DAY=3, MAX_NOTIONAL=10000. These match the governing rules. No environment edit or deploy occurred; loaded-process values are not independently exposed. |
 | Minimal migration suite | Passed historical preservation, audit rollback, role restrictions, one-pending-delivery constraint. |
@@ -45,6 +70,7 @@ npm run test:migration
 python tests/sheet_acceptance_probe.py before.json after.json
 python tests/credentialed_writer_acceptance.py --connection-file LOCAL_CONNECTION_JSON --credentials LOCAL_ADC_JSON --test-sheet DEDICATED_TEST_SHEET_ID --apply-test-writes
 python tests/isolated_service_acceptance.py --connection-file LOCAL_CONNECTION_JSON --template-db WRITER_ACCEPTANCE_DATABASE --postgrest POSTGREST_EXECUTABLE --postgres-bin POSTGRES_BIN_DIRECTORY
+python tests/hosted_staging_acceptance.py --connection-file IGNORED_STAGING_CONNECTION_JSON --expected-commit 242e33c8fd4aad68f039baeecf9afbc55bfe4843 --apply-staging-fixtures
 ```
 
 For the Sheet probe, snapshots contain the complete bounded grids of a dedicated test workbook, keyed by Scan Coverage/Premarket Candidates, each with `values` and `row_count`. The first invocation without `after.json` produces the patches; the second validates fresh connector readback and asserts one matching stable-ID row and NOOP retry. Never apply its fixtures to the production Journal.
@@ -59,11 +85,11 @@ For the Sheet probe, snapshots contain the complete bounded grids of a dedicated
 - [x] Provision isolated native PostgreSQL and local Google credentials. Credentials stay in ignored local storage; the test rejects non-loopback databases, the production Sheet ID, and workbooks without an INFRASTRUCTURE TEST title. No remote development branch was created.
 - [x] Run the standalone writer with real database source reads, competing processes, successful readback, durable ambiguous-write blocking, and NOOP retry. Explicit operator reconciliation after an ambiguous delivery remains a manual procedure; automatic recovery is intentionally absent.
 - [x] Exercise authenticated Discovery → Orchestrator → Worker requests across isolated local processes, real PostgREST, and the target migration chain.
-- [ ] Verify equivalent behavior in hosted staging with actual Supabase gateway/RLS and Render network configuration. Local integration does not establish hosted parity.
+- [x] Verify bounded hosted staging transport, authentication/RLS, setup handoffs, traceability, retries, and infrastructure exclusion. Real-market lifecycle parity and hosted journal scheduling are not claimed.
 - [x] Verify current health reports SHADOW, execution disabled, and automatic trigger confirmation disabled.
 - [x] Verify configured risk environment settings through the Render dashboard (read-only); loaded-process introspection remains unavailable.
 - [ ] Obtain separate production rollout authorization. Coordinate all six auto-deploying services and pause automatic deployment before merging if migration/service ordering requires it.
 - [ ] Apply both migrations in order, verify new constraints/audit behavior, deploy compatible service/caller contracts, and confirm SHADOW with broker execution disabled before resuming scheduled work.
 - [ ] Enable/schedule the journal writer only after independent acceptance; reconcile any ambiguous historical IDs explicitly. Never delete/relabel old test evidence as part of rollout.
 
-The remaining staging integration and runtime-configuration checks are required before approving production activation. A merge today would trigger deployment, so it is not an administrative-only step.
+Production runtime-configuration checks, migration/caller ordering, and separate approval remain required before production activation. A merge today would trigger deployment, so it is not an administrative-only step.
