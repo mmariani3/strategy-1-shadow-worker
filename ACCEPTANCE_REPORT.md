@@ -2,7 +2,7 @@
 
 ## Result
 
-**Keep the PR in draft; do not merge yet.** Local and connector-assisted checks passed after two additional fixes. Standalone writer authentication/database transport and full staging service integration remain unverified. No production code, schema, Journal record, or execution setting was changed.
+**Keep the PR in draft; do not merge yet.** Local, connector-assisted, and credentialed standalone writer checks passed. Full staging service integration remains unverified. No production code, schema, Journal record, or execution setting was changed.
 
 ## Review and fixes
 
@@ -26,7 +26,9 @@ The living masters were reread: Strategy Rules v0.3, Experiment Plan v0.5, Autom
 
 The [test workbook](https://docs.google.com/spreadsheets/d/1r_qpnfYin7mwNoO5__yAH_SA6wM0Y06wW42D43x6ImU/edit) is explicitly titled INFRASTRUCTURE TEST and is a separate copy. Its two process tabs contain only test rows with exclusion notes. Other copied tabs retain their copied contents and are not new evidence. No test record belongs in Strategy #1 validation metrics.
 
-The Sheet probe executes the actual projection/planning/readback code, with Google Drive connector transport. It **does not** exercise the standalone writer's Google Application Default Credentials, its direct psycopg source reads, or the cross-process advisory lock. Local tests cover the lock-contention/ambiguous-delivery logic and SQL uniqueness barrier separately. Do not present this as a fully credentialed end-to-end writer test.
+The earlier Sheet probe uses Google Drive connector transport. The subsequent `tests/credentialed_writer_acceptance.py` test exercises the actual standalone CLI with Google Application Default Credentials and native PostgreSQL 17.6 on loopback. It reconstructs the captured schema, applies both migrations, reads four source records, writes through Google Sheets API, verifies readback, and confirms a NOOP retry with exactly one row per stable ID. A second OS process is rejected while the first connection holds the session lock. A real Google write followed by an injected lost acknowledgement leaves a durable PENDING delivery; a fresh CLI process refuses to retry, while an independent Google read confirms the accepted write. The isolated ledger retains one VERIFIED and one PENDING record; no automatic recovery or clearing was performed.
+
+All new Sheet records carry explicit INFRASTRUCTURE_TEST exclusion notes. The local database uses STRATEGY_1 branch fixtures solely to exercise the production projection guards; they never enter production or strategy evidence. This tests native PostgreSQL, not the hosted Supabase gateway/RLS configuration. The successful path invokes the unmodified standalone CLI; the lost-acknowledgement path injects a transport failure around the real Google write.
 
 `tests/live_schema_snapshot.json` contains schema metadata only, no production row data or secrets. It is an isolated test fixture, not a deployment bootstrap or an export of all live grants, RLS policies, extensions, or numeric typmods. The companion test reconstructs the two timestamp-update functions' inspected behavior. PGlite is not the live Supabase runtime.
 
@@ -36,6 +38,7 @@ The Sheet probe executes the actual projection/planning/readback code, with Goog
 python -m pytest -q
 npm run test:migration
 python tests/sheet_acceptance_probe.py before.json after.json
+python tests/credentialed_writer_acceptance.py --connection-file LOCAL_CONNECTION_JSON --credentials LOCAL_ADC_JSON --test-sheet DEDICATED_TEST_SHEET_ID --apply-test-writes
 ```
 
 For the Sheet probe, snapshots contain the complete bounded grids of a dedicated test workbook, keyed by Scan Coverage/Premarket Candidates, each with `values` and `row_count`. The first invocation without `after.json` produces the patches; the second validates fresh connector readback and asserts one matching stable-ID row and NOOP retry. Never apply its fixtures to the production Journal.
@@ -47,8 +50,8 @@ For the Sheet probe, snapshots contain the complete bounded grids of a dedicated
 - [x] Reproduce and fix both compatibility failures.
 - [x] Verify isolated migration chain and connector-assisted Sheet reconciliation.
 - [x] Verify Render auto-deploy behavior and deployed commit metadata.
-- [ ] Provision an isolated direct/session-pooled database connection and dedicated Google credentials for the test workbook. Neither JOURNAL_DATABASE_URL nor Google Application Default Credentials is configured in this task. No remote development branch currently exists.
-- [ ] Run the standalone writer end-to-end with those credentials: source-row locks, two competing processes, successful readback, ambiguous write recovery, and NOOP retry. Keep infrastructure fixtures entirely outside production.
+- [x] Provision isolated native PostgreSQL and local Google credentials. Credentials stay in ignored local storage; the test rejects non-loopback databases, the production Sheet ID, and workbooks without an INFRASTRUCTURE TEST title. No remote development branch was created.
+- [x] Run the standalone writer with real database source reads, competing processes, successful readback, durable ambiguous-write blocking, and NOOP retry. Explicit operator reconciliation after an ambiguous delivery remains a manual procedure; automatic recovery is intentionally absent.
 - [ ] Exercise authenticated Discovery → Orchestrator → Worker requests against isolated deployed services and the target migration chain.
 - [x] Verify current health reports SHADOW, execution disabled, and automatic trigger confirmation disabled.
 - [ ] Verify actual risk environment settings; health/metadata does not expose those values.
@@ -56,4 +59,4 @@ For the Sheet probe, snapshots contain the complete bounded grids of a dedicated
 - [ ] Apply both migrations in order, verify new constraints/audit behavior, deploy compatible service/caller contracts, and confirm SHADOW with broker execution disabled before resuming scheduled work.
 - [ ] Enable/schedule the journal writer only after independent acceptance; reconcile any ambiguous historical IDs explicitly. Never delete/relabel old test evidence as part of rollout.
 
-The remaining credentialed acceptance is required before approving production activation. A merge today would trigger deployment, so it is not an administrative-only step.
+The remaining staging integration and runtime-configuration checks are required before approving production activation. A merge today would trigger deployment, so it is not an administrative-only step.
