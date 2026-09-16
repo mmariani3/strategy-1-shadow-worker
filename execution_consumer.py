@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 APP_VERSION = '0.2.0-shadow-execution'
-EXECUTION_ENABLED = os.getenv('EXECUTION_ENABLED','false').lower() == 'true'
+EXECUTION_ENABLED = False  # Phase 1 boundary; environment overrides cannot enable submission.
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_SECRET_KEY = os.getenv('SUPABASE_SECRET_KEY')
 EXECUTOR_URL = os.getenv('EXECUTOR_URL','https://day-trading-paper-executor.onrender.com')
@@ -16,7 +16,7 @@ SERVICE_TOKEN = os.getenv('EXECUTION_SERVICE_TOKEN')
 ALLOWED_RULESET = os.getenv('RULESET_VERSION','v0.3')
 
 app = FastAPI(title='Strategy #1 Execution Consumer', version=APP_VERSION,
-              description='Phase-1 shadow execution consumer + lifecycle monitor. Broker submission is hard-disabled unless EXECUTION_ENABLED=true.')
+              description='Phase-1 shadow execution consumer + lifecycle monitor. Broker submission is hard-disabled.')
 bearer = HTTPBearer(auto_error=False)
 
 
