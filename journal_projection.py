@@ -77,8 +77,12 @@ def run_projection(run):
               "Scan Status": {"COMPLETE": "Complete", "PARTIAL": "Partial", "DATA_UNAVAILABLE": "Data Unavailable"}.get(run["status"], "Partial"),
               "Notes": run.get("notes") or ""}
     for key, header in CHANNELS.items():
-        values[header] = (run.get("channel_status") or {}).get(key) or "Unavailable"
-    return {"sheet_name": "Scan Coverage", "key_column": "Run ID", "key": str(run["id"]), "values": values}
+        status = (run.get("channel_status") or {}).get(key)
+        values[header] = "Checked" if status in {
+            "CHECKED_FRED_RELEASE_CALENDAR", "CHECKED_ALPACA_SCREENER", "CHECKED_ALPACA_NEWS", "Checked"
+        } else "Unavailable"
+    return {"sheet_name": "Scan Coverage", "key_column": "Run ID", "key": str(run["id"]), "values": values,
+            "trace": {"run_id": str(run["id"]), "channel_status": run.get("channel_status") or {}}}
 
 
 def project_run(run, items, candidates, signals):

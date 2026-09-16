@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 from journal_writer import JournalConflict,deliver,plan,writer_lock
-from journal_projection import project_run,candidate_projection
+from journal_projection import project_run,candidate_projection,run_projection
 from fastapi import HTTPException
 
 
@@ -126,6 +126,16 @@ def test_discovery_funnel_before_any_signal():
 @pytest.mark.parametrize("classification",[None,"INFRASTRUCTURE_TEST"])
 def test_infrastructure_and_unclassified_runs_excluded(classification):
     with pytest.raises(HTTPException): project_run({"experiment_class":classification},[],[],[])
+
+
+def test_coverage_matches_live_dropdown_without_inferring_completion():
+    run={"id":"run","session_date":"2026-09-15","ruleset_version":"v0.3","status":"PARTIAL",
+         "channel_status":{"earnings_guidance":"CHECKED_ALPACA_NEWS","cross_source_verification":"REVIEW_REQUIRED"}}
+    row=run_projection(run)
+    assert row["values"]["Earnings / Guidance"]=="Checked"
+    assert row["values"]["Cross-Source Verification"]=="Unavailable"
+    assert row["values"]["Scan Status"]=="Partial"
+    assert row["trace"]["channel_status"]==run["channel_status"]
 
 
 @pytest.mark.parametrize("mismatch",[None,"candidate_id","run_id","data_kind"])
