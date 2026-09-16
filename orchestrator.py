@@ -88,6 +88,8 @@ def _sb_headers() -> dict[str, str]:
         raise HTTPException(status_code=503, detail="Supabase server credentials are not configured.")
     return {
         "apikey": SUPABASE_SECRET_KEY,
+        **({"Authorization": f"Bearer {SUPABASE_SECRET_KEY}"}
+           if SUPABASE_SECRET_KEY.count(".") == 2 else {}),
         "Content-Type": "application/json",
         "Prefer": "return=representation",
     }

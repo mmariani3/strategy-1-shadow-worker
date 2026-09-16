@@ -454,6 +454,8 @@ def write_supabase(c: Candidate, d: Decision) -> str:
         f"{SUPABASE_URL.rstrip('/')}/rest/v1/strategy_signals",
         headers={
             "apikey": SUPABASE_SECRET_KEY,
+            **({"Authorization": f"Bearer {SUPABASE_SECRET_KEY}"}
+               if SUPABASE_SECRET_KEY.count(".") == 2 else {}),
             "Content-Type": "application/json",
             "Prefer": "return=representation",
         },

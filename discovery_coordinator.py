@@ -118,6 +118,8 @@ def sb_headers(prefer: bool = True) -> dict[str, str]:
         )
     headers = {
         "apikey": SUPABASE_SECRET_KEY,
+        **({"Authorization": f"Bearer {SUPABASE_SECRET_KEY}"}
+           if SUPABASE_SECRET_KEY.count(".") == 2 else {}),
         "Content-Type": "application/json",
     }
     if prefer:
