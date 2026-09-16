@@ -425,11 +425,12 @@ def evaluate_stored(c: dict[str, Any]):
 
 def context_updates(review: ConfirmationIn):
     updates = review.model_dump(mode="json", exclude={"confirmed", "confirmation_source", "resume_monitoring"}, exclude_none=True)
+    encoded = review.model_dump(mode="json")
     # Every review supplies current assessments. Omission explicitly invalidates an old approval.
     for field in CURRENT_FIELDS:
-        updates[field] = getattr(review, field, None)
+        updates[field] = encoded.get(field)
     for field in ("clean_structure", "consolidated_data"):
-        updates[field] = getattr(review, field, None)
+        updates[field] = encoded.get(field)
     updates["current_review"] = review.current_review.model_dump(mode="json") if review.current_review else None
     valid_timestamp(review.data_timestamp)
     if not review.confirmation_source.strip():

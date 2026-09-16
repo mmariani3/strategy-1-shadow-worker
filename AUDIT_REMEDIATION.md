@@ -2,7 +2,7 @@
 
 Base: `edc71cd162078b165f13aaf34262ba6b377520b7` (GitHub main checked again September 15, 2026). This change fixes infrastructure and enforcement gaps. It does not deploy services, apply production SQL, submit orders, write the live Journal, or change historical records.
 
-Follow-up isolated acceptance results and the rollout checklist: [ACCEPTANCE_REPORT.md](ACCEPTANCE_REPORT.md). Acceptance found and fixed a live discovery-state constraint mismatch and a Scan Coverage dropdown mismatch. Apply **both** checked-in migrations in filename order.
+Follow-up isolated acceptance results and the rollout checklist: [ACCEPTANCE_REPORT.md](ACCEPTANCE_REPORT.md). Acceptance found and fixed a live discovery-state constraint mismatch, a Scan Coverage dropdown mismatch, and Decimal JSON encoding in confirmation reviews. Apply **both** checked-in migrations in filename order. Native database/Google writer acceptance and real local HTTP service integration passed; hosted parity remains unverified.
 
 Authority reviewed: living [Strategy Rules v0.3](https://docs.google.com/document/d/1DBtZYKLV0MdIg_f8NspwVLIoeTxCi9amlRFHO9Ji0tM/edit), [Experiment Plan v0.5](https://docs.google.com/document/d/1sfL2FAn-p6peY8LLbEwka_2gYIGiGka_BGe6prsygCc/edit), and [Automation Specification v0.4](https://docs.google.com/document/d/1uDGbnHQHX6tDD9a5efJD-O9FuMW6xvn_xlhCrltlfjw/edit). These masters retain their respective authority. No source files are edited.
 

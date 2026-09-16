@@ -2,7 +2,7 @@
 
 ## Result
 
-**Keep the PR in draft; do not merge yet.** Local, connector-assisted, and credentialed standalone writer checks passed. Full staging service integration remains unverified. No production code, schema, Journal record, or execution setting was changed.
+**Keep the PR in draft; do not merge yet.** Local HTTP service integration, credentialed standalone writer checks, and read-only configured risk-limit verification passed. Hosted Render/Supabase staging parity and loaded-process environment remain unverified. No production code, schema, Journal record, or execution setting was changed.
 
 ## Review and fixes
 
@@ -10,19 +10,22 @@ The living masters were reread: Strategy Rules v0.3, Experiment Plan v0.5, Autom
 
 1. **Discovery state constraint:** read-only live catalog inspection found `strategy_discovery_items_operational_state_check` allowed only WATCHLIST_CANDIDATE and WORKER_READY. The first PR migration alone did not widen it. HOLD, rejection, and routed Worker-state writes would fail. `20260916001258_discovery_state_acceptance_fix.sql` now permits the states actually emitted, while retaining the original states and all historical values. A regression reproduces the original rejection before applying the migration chain and then verifies each new state.
 2. **Journal dropdown compatibility:** the actual Scan Coverage cells allow Checked/Unavailable. The projection emitted internal CHECKED_ALPACA_NEWS and similar codes. It now maps recognized completed source checks to Checked and unresolved/unavailable/unknown states to Unavailable. Raw channel evidence stays in the delivery trace/database. Scan Status remains Partial when applicable; source checks do not imply full scan completion.
+3. **Confirmation transport failure:** real HTTP integration found `context_updates` replaced JSON-encoded daily-loss values with Python Decimal objects. A confirmation/resume request then failed with HTTP 500 before its database PATCH. The method now retains Pydantic's JSON encoding while explicitly clearing omitted assessments. A focused JSON serialization regression and the full HTTP lifecycle pass.
 
 ## Evidence
 
 | Check | Result and scope |
 | --- | --- |
-| Python regression suite | 64 passed. Network blocked for unit tests. |
+| Python regression suite | 65 passed. Network blocked for unit tests. |
+| Local service integration | Real authenticated HTTP between Discovery, Orchestrator and Worker, PostgREST 16.3, native PostgreSQL 17.6. Twelve acceptance checks passed; only the quote provider and Supabase key gateway are test adapters. |
+| Configured Worker risk limits | Read-only Render environment inspection: MAX_DOLLAR_RISK=50, MAX_DAILY_LOSS_DOLLARS=100, MAX_TRADES_PER_DAY=3, MAX_NOTIONAL=10000. These match the governing rules. No environment edit or deploy occurred; loaded-process values are not independently exposed. |
 | Minimal migration suite | Passed historical preservation, audit rollback, role restrictions, one-pending-delivery constraint. |
 | Live-schema reconstruction | Passed in isolated PGlite using captured table column types/defaults/nullability, constraints, indexes and update-trigger behavior. Reproduced and corrected the discovery-state error; retained original row fields; duplicate run still rejected. |
 | Test Journal write/readback | 48 generated cell patches, 4 unique records: one Scan Coverage and three pre-signal candidate states. Fresh readback matched; a second reconciliation produced NOOP. |
 | Strategy Journal | Read-only metadata/header/validation inspection; no writes. |
 | Production Supabase | Read-only project, branch and schema inspection; no test rows or migrations applied. |
 | Render deployment metadata | Four web services report live audited commit `edc71cd162078b165f13aaf34262ba6b377520b7`. All six services from this repository auto-deploy on commits to main. Web-service PR previews are off. |
-| Runtime health/settings | After initial cold-start timeouts, all four public health endpoints returned ok, SHADOW, v0.3 and broker_execution_enabled=false. Orchestrator also reports trigger_confirmation_automatic=false. Actual risk environment values remain unverified. |
+| Runtime health/settings | All four public health endpoints returned ok, SHADOW, v0.3 and broker_execution_enabled=false. Orchestrator also reports trigger_confirmation_automatic=false. Configured risk values are verified separately above; process introspection is not available. |
 
 The [test workbook](https://docs.google.com/spreadsheets/d/1r_qpnfYin7mwNoO5__yAH_SA6wM0Y06wW42D43x6ImU/edit) is explicitly titled INFRASTRUCTURE TEST and is a separate copy. Its two process tabs contain only test rows with exclusion notes. Other copied tabs retain their copied contents and are not new evidence. No test record belongs in Strategy #1 validation metrics.
 
@@ -32,6 +35,8 @@ All new Sheet records carry explicit INFRASTRUCTURE_TEST exclusion notes. The lo
 
 `tests/live_schema_snapshot.json` contains schema metadata only, no production row data or secrets. It is an isolated test fixture, not a deployment bootstrap or an export of all live grants, RLS policies, extensions, or numeric typmods. The companion test reconstructs the two timestamp-update functions' inspected behavior. PGlite is not the live Supabase runtime.
 
+`tests/isolated_service_acceptance.py` copies the isolated writer-test database and starts three real service processes plus PostgREST. A local gateway checks a test API key and supplies a service-role JWT. The service launcher refuses non-loopback HTTP and replaces only the market quote provider with an explicit fixture. Verified: missing-auth rejection, qualification without constructing a candidate, incomplete setup HOLD, idempotent setup replay, monitoring excludes HOLD, crossing only observes, explicit resume retains prior observation events, unapproved target remains HOLD after confirmation, negative missed-trigger review produces NO_TRADE, clean prospective confirmation produces a SHADOW TRADE, all applicable trace IDs and implementation fingerprint persist, and infrastructure classification survives handoff. Fixtures are local-only and never strategy evidence; no market discovery scan or real broker/market API was called. The successful run database is `services_acceptance_8c3a5cbb06464a9ca72a6f1a3b5da4e4`. All temporary HTTP services stop after the test.
+
 ## Reproduction
 
 ```text
@@ -39,6 +44,7 @@ python -m pytest -q
 npm run test:migration
 python tests/sheet_acceptance_probe.py before.json after.json
 python tests/credentialed_writer_acceptance.py --connection-file LOCAL_CONNECTION_JSON --credentials LOCAL_ADC_JSON --test-sheet DEDICATED_TEST_SHEET_ID --apply-test-writes
+python tests/isolated_service_acceptance.py --connection-file LOCAL_CONNECTION_JSON --template-db WRITER_ACCEPTANCE_DATABASE --postgrest POSTGREST_EXECUTABLE --postgres-bin POSTGRES_BIN_DIRECTORY
 ```
 
 For the Sheet probe, snapshots contain the complete bounded grids of a dedicated test workbook, keyed by Scan Coverage/Premarket Candidates, each with `values` and `row_count`. The first invocation without `after.json` produces the patches; the second validates fresh connector readback and asserts one matching stable-ID row and NOOP retry. Never apply its fixtures to the production Journal.
@@ -52,9 +58,10 @@ For the Sheet probe, snapshots contain the complete bounded grids of a dedicated
 - [x] Verify Render auto-deploy behavior and deployed commit metadata.
 - [x] Provision isolated native PostgreSQL and local Google credentials. Credentials stay in ignored local storage; the test rejects non-loopback databases, the production Sheet ID, and workbooks without an INFRASTRUCTURE TEST title. No remote development branch was created.
 - [x] Run the standalone writer with real database source reads, competing processes, successful readback, durable ambiguous-write blocking, and NOOP retry. Explicit operator reconciliation after an ambiguous delivery remains a manual procedure; automatic recovery is intentionally absent.
-- [ ] Exercise authenticated Discovery → Orchestrator → Worker requests against isolated deployed services and the target migration chain.
+- [x] Exercise authenticated Discovery → Orchestrator → Worker requests across isolated local processes, real PostgREST, and the target migration chain.
+- [ ] Verify equivalent behavior in hosted staging with actual Supabase gateway/RLS and Render network configuration. Local integration does not establish hosted parity.
 - [x] Verify current health reports SHADOW, execution disabled, and automatic trigger confirmation disabled.
-- [ ] Verify actual risk environment settings; health/metadata does not expose those values.
+- [x] Verify configured risk environment settings through the Render dashboard (read-only); loaded-process introspection remains unavailable.
 - [ ] Obtain separate production rollout authorization. Coordinate all six auto-deploying services and pause automatic deployment before merging if migration/service ordering requires it.
 - [ ] Apply both migrations in order, verify new constraints/audit behavior, deploy compatible service/caller contracts, and confirm SHADOW with broker execution disabled before resuming scheduled work.
 - [ ] Enable/schedule the journal writer only after independent acceptance; reconcile any ambiguous historical IDs explicitly. Never delete/relabel old test evidence as part of rollout.

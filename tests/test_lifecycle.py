@@ -73,6 +73,14 @@ def test_omitted_inputs_do_not_reuse_old_approval(candidate_data,store):
     assert result["operational_state"] == "HOLD_UNRESOLVED"
 
 
+def test_review_updates_can_cross_json_transport(candidate_data):
+    import json
+    review = review_for(candidate_data, realized_daily_loss_dollars="12.34", liquidity_ok=None)
+    wire = json.loads(json.dumps(orch.context_updates(review)))
+    assert wire["realized_daily_loss_dollars"] == "12.34"
+    assert wire["liquidity_ok"] is None
+
+
 def test_positive_confirmation_requires_observation(candidate_data,store):
     c,_=store;c["trigger_observed_at"]=None;c["operational_state"]="WAITING_FOR_TRIGGER"
     with pytest.raises(HTTPException): orch.confirm_trigger(c["id"],review_for(candidate_data,confirmed=True),None)
