@@ -1,6 +1,6 @@
 {
   "name": "strategy-1-shadow-worker-schema-tests",
   "private": true,
-  "scripts": { "test:migration": "node tests/test_migration.mjs && node tests/test_live_schema.mjs" },
+  "scripts": { "test:migration": "node tests/test_migration.mjs && node tests/test_live_schema.mjs && node tests/test_production_default_privileges.mjs" },
   "devDependencies": { "@electric-sql/pglite": "0.5.8" }
 }
