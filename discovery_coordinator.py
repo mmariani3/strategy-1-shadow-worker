@@ -8,8 +8,11 @@ import requests
 from fastapi import FastAPI, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field, model_validator
+from review_contract import CurrentReview, readiness_problem
+from build_info import implementation_version
 
-APP_VERSION = "0.8.0-shadow-discovery"
+APP_VERSION = "0.9.0-shadow-discovery"
+IMPLEMENTATION_VERSION = implementation_version("discovery_coordinator", APP_VERSION)
 RULESET_VERSION = os.getenv("RULESET_VERSION", "v0.3")
 
 DISCOVERY_SERVICE_TOKEN = os.getenv("DISCOVERY_SERVICE_TOKEN")
@@ -115,11 +118,20 @@ def sb_headers(prefer: bool = True) -> dict[str, str]:
         )
     headers = {
         "apikey": SUPABASE_SECRET_KEY,
+        **({"Authorization": f"Bearer {SUPABASE_SECRET_KEY}"}
+           if SUPABASE_SECRET_KEY.count(".") == 2 else {}),
         "Content-Type": "application/json",
     }
     if prefer:
         headers["Prefer"] = "return=representation"
     return headers
+
+
+def attributable(record):
+    review = record.get("qualification_review") or record.get("rejection_review") or (record.get("setup_review") or {}).get("current_review") or {}
+    return {**record, "transition_context": {"owner": "discovery_coordinator",
+        "implementation_version": IMPLEMENTATION_VERSION, "reviewer": review.get("reviewer"),
+        "reason": record.get("operational_state") or record.get("promotion_status") or record.get("status") or "DISCOVERY_UPDATE"}}
 
 
 def sb_insert(
@@ -129,7 +141,7 @@ def sb_insert(
     r = requests.post(
         f"{SUPABASE_URL.rstrip('/')}/rest/v1/{table}",
         headers=sb_headers(),
-        json=record,
+        json=attributable(record),
         timeout=20,
     )
     if not r.ok:
@@ -149,7 +161,7 @@ def sb_update(
         f"{SUPABASE_URL.rstrip('/')}/rest/v1/{table}",
         headers=sb_headers(),
         params={"id": f"eq.{row_id}"},
-        json=record,
+        json=attributable(record),
         timeout=20,
     )
     if not r.ok:
@@ -184,7 +196,7 @@ def finalize_discovery_run(
         f"{SUPABASE_URL.rstrip('/')}/rest/v1/strategy_discovery_runs",
         headers=sb_headers(),
         params={"run_key": f"eq.{run_key}"},
-        json=record,
+        json=attributable(record),
         timeout=20,
     )
     if not r.ok:
@@ -309,6 +321,7 @@ def create_run_once(
         "phase": req.phase,
         "ruleset_version": RULESET_VERSION,
         "run_key": run_key,
+        "experiment_class": req.run_class,
         "status": "IN_PROGRESS",
         "channel_status": {},
         "notes": (
@@ -320,7 +333,7 @@ def create_run_once(
     r = requests.post(
         f"{SUPABASE_URL.rstrip('/')}/rest/v1/strategy_discovery_runs",
         headers=sb_headers(),
-        json=payload,
+        json=attributable(payload),
         timeout=20,
     )
 
@@ -742,7 +755,7 @@ class ScanRequest(BaseModel):
     run_class: Literal[
         "STRATEGY_1",
         "INFRASTRUCTURE_TEST",
-    ] = "STRATEGY_1"
+    ]
 
     movers_top: int = Field(
         default=20,
@@ -881,6 +894,7 @@ def run_scan(
         return {
             "run_id": run["id"],
             "run_key": run_key,
+            "experiment_class": run.get("experiment_class"),
             "run_class": req.run_class,
             "status": run.get("status"),
             "candidates_discovered": run.get(
@@ -1146,6 +1160,7 @@ def run_scan(
     return {
         "run_id": run["id"],
         "run_key": run_key,
+        "experiment_class": req.run_class,
         "run_class": req.run_class,
         "status": persisted_run["status"],
         "candidates_discovered": persisted_run["candidates_discovered"],
@@ -1197,6 +1212,8 @@ def latest_run(
 
 
 class QualificationRequest(BaseModel):
+    reviewer: str = Field(min_length=1)
+    reviewed_at: datetime
     model_config = {"extra": "forbid"}
     direction: Literal["LONG", "SHORT"]
     catalyst_summary: str = Field(min_length=1)
@@ -1209,6 +1226,8 @@ class QualificationRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_review(self):
+        if not self.reviewer.strip() or self.reviewed_at.tzinfo is None or self.reviewed_at > datetime.now(timezone.utc):
+            raise ValueError("Attributable, timezone-aware review required.")
         if not self.catalyst_summary.strip() or not self.materiality_rationale.strip():
             raise ValueError("Catalyst summary and materiality rationale must be nonblank.")
         if any(not s.source.strip() or not s.source_type.strip() or
@@ -1221,6 +1240,10 @@ class QualificationRequest(BaseModel):
 
 
 class SetupRequest(BaseModel):
+    data_kind: Literal["MARKET", "SYNTHETIC"]
+    data_timestamp: datetime | None = None
+    data_quality_ok: bool | None = None
+    current_review: CurrentReview | None = None
     model_config = {"extra": "forbid"}
     setup_rationale: str = Field(min_length=1)
     market_data_source: str = Field(min_length=1)
@@ -1284,7 +1307,7 @@ def reserve_artifact(item_id: str, column: str, record: dict[str, Any]):
                        headers=sb_headers(),
                        params={"id": f"eq.{item_id}", column: "is.null",
                                "promotion_status": "not.in.(PROMOTED,REJECTED)"},
-                       json=record, timeout=20)
+                       json=attributable(record), timeout=20)
     if not r.ok:
         raise HTTPException(status_code=502, detail="Artifact persistence failed.")
     rows = r.json()
@@ -1318,6 +1341,8 @@ def qualify_item(item_id: str, review: QualificationRequest):
 
 def construct_setup(item_id: str, setup: SetupRequest):
     item, run = discovery_context(item_id)
+    if run.get("experiment_class") not in ("STRATEGY_1", "INFRASTRUCTURE_TEST"):
+        raise HTTPException(status_code=409, detail="Historical run lacks structured class; explicit reconciliation required.")
     if not item.get("qualification_review") or item.get("promotion_status") == "REJECTED":
         raise HTTPException(status_code=409, detail="Explicit catalyst qualification is required before setup.")
     review = QualificationRequest.model_validate(item["qualification_review"])
@@ -1327,25 +1352,27 @@ def construct_setup(item_id: str, setup: SetupRequest):
     if any(value <= 0 for value in geometry):
         raise HTTPException(status_code=422, detail="Invalid directional entry/stop/target geometry.")
     payload = setup.model_dump(mode="json")
+    problem = readiness_problem({**payload, "session_date": run["session_date"]})
+    readiness = "HOLD_UNRESOLVED" if problem else "WORKER_READY"
     if item.get("setup_review") is not None and item["setup_review"] != payload:
         raise HTTPException(status_code=409, detail="Setup already recorded; conflicting setup rejected.")
     if item.get("promotion_status") == "PROMOTED":
         if not item.get("orchestrator_candidate_id"):
             raise HTTPException(status_code=502, detail="Promoted item is missing its candidate link.")
         return {"discovery_item_id": item_id, "run_id": run["id"],
-                "operational_state": "WORKER_READY", "setup_status": "PREDEFINED",
+                "operational_state": item.get("operational_state") or readiness, "setup_status": "PREDEFINED",
                 "candidate_id": item["orchestrator_candidate_id"], "idempotent_replay": True}
     if not ORCHESTRATOR_TOKEN:
         raise HTTPException(status_code=503, detail="ORCHESTRATOR_TOKEN is not configured.")
     # Persist the explicit setup before handoff. WORKER_READY never means TRADE.
     if item.get("setup_review") is None:
         reserve_artifact(item_id, "setup_review",
-                         {"setup_review": payload, "operational_state": "WORKER_READY"})
-    infrastructure = "INFRASTRUCTURE_TEST" in (run.get("notes") or "")
-    body = {**review.model_dump(mode="json"),
+                         {"setup_review": payload, "operational_state": readiness})
+    infrastructure = run["experiment_class"] == "INFRASTRUCTURE_TEST"
+    body = {**review.model_dump(mode="json", exclude={"reviewer", "reviewed_at"}),
             **setup.model_dump(mode="json", exclude={"setup_rationale"}),
             "experiment_class": "INFRASTRUCTURE_TEST" if infrastructure else "STRATEGY_1",
-            "source_discovery_item_id": item_id, "session_date": run["session_date"],
+            "source_discovery_item_id": item_id, "run_id": run["id"], "session_date": run["session_date"],
             "discovery_phase": run["phase"], "symbol": item["symbol"],
             "ruleset_version": RULESET_VERSION,
             "catalyst_event_at": review.catalyst_sources[0].event_timestamp.isoformat(),
@@ -1370,9 +1397,10 @@ def construct_setup(item_id: str, setup: SetupRequest):
     except (ValueError, TypeError, AttributeError):
         raise HTTPException(status_code=502, detail="Orchestrator response missing a valid candidate_id.")
     sb_update("strategy_discovery_items", item_id,
-              {"promotion_status": "PROMOTED", "orchestrator_candidate_id": result["candidate_id"]})
+              {"promotion_status": "PROMOTED", "orchestrator_candidate_id": result["candidate_id"],
+               "operational_state": result.get("operational_state", readiness)})
     return {"discovery_item_id": item_id, "run_id": run["id"],
-            "operational_state": "WORKER_READY", "setup_status": "PREDEFINED",
+            "operational_state": result.get("operational_state", readiness), "setup_status": "PREDEFINED",
             "candidate_id": result["candidate_id"], "orchestrator": result, "idempotent_replay": False}
 
 
@@ -1394,20 +1422,26 @@ def setup_item(item_id: str, setup: SetupRequest,
 def promote(item_id: str, review: PromoteRequest,
             credentials: HTTPAuthorizationCredentials | None = Security(bearer)):
     require_auth(credentials)
-    # Legacy combined requests use their explicit notes as the setup rationale.
-    # Both models are validated before qualification has any side effects.
-    from pydantic import ValidationError
-    try:
-        raw = review.model_dump(mode="json")
-        setup = SetupRequest.model_validate({
-            **{name: raw[name] for name in SetupRequest.model_fields if name in raw},
-            "setup_rationale": raw.get("setup_rationale") or raw.get("notes") or "",
-        })
-        qualification = QualificationRequest.model_validate({
-            **{name: raw[name] for name in QualificationRequest.model_fields if name in raw},
-            "catalyst_summary": review.catalyst_sources[0].headline_or_event,
-        })
-    except ValidationError as exc:
-        raise HTTPException(status_code=422, detail="Combined promotion requires valid catalyst evidence and an explicit setup rationale.") from exc
-    qualify_item(item_id, qualification)
-    return construct_setup(item_id, setup)
+    raise HTTPException(status_code=410, detail="Use /qualify then /setup with attributable current review.")
+
+
+class RejectionRequest(BaseModel):
+    model_config = {"extra": "forbid", "str_strip_whitespace": True}
+    reviewer: str = Field(min_length=1)
+    reviewed_at: datetime
+    reason: str = Field(min_length=1)
+
+
+@app.post("/items/{item_id}/reject")
+def reject_item(item_id: str, review: RejectionRequest,
+                credentials: HTTPAuthorizationCredentials | None = Security(bearer)):
+    require_auth(credentials)
+    item, run = discovery_context(item_id)
+    if review.reviewed_at.tzinfo is None or review.reviewed_at > datetime.now(timezone.utc):
+        raise HTTPException(status_code=422, detail="Timezone-aware prospective review required.")
+    if item.get("orchestrator_candidate_id"):
+        raise HTTPException(status_code=409, detail="Review the routed candidate through the Orchestrator.")
+    reserve_artifact(item_id, "rejection_review", {
+        "rejection_review": review.model_dump(mode="json"), "rejection_reason": review.reason,
+        "operational_state": "REJECTED", "promotion_status": "REJECTED"})
+    return {"discovery_item_id": item_id, "run_id": run["id"], "operational_state": "REJECTED"}

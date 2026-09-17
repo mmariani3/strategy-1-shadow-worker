@@ -8,8 +8,6 @@ services:
     envVars:
       - key: RULESET_VERSION
         value: v0.3
-      - key: WORKER_VERSION
-        value: 0.1.0-shadow
       - key: MAX_DOLLAR_RISK
         value: "50"
       - key: MAX_DAILY_LOSS_DOLLARS

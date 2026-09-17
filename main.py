@@ -1,6 +1,6 @@
 import hmac
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal, ROUND_DOWN
 from typing import Any, Literal
 
@@ -8,11 +8,13 @@ import requests
 from fastapi import FastAPI, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field, model_validator
+from review_contract import CurrentReview, review_problem, evidence_class_problem
+from build_info import implementation_version
 
-APP_VERSION = "0.1.2-shadow"
+APP_VERSION = "0.2.0-shadow"
 STRATEGY_ID = "STRATEGY_1"
 RULESET_VERSION = os.getenv("RULESET_VERSION", "v0.3")
-WORKER_VERSION = os.getenv("WORKER_VERSION", APP_VERSION)
+WORKER_VERSION = implementation_version("main", APP_VERSION)
 
 MAX_DOLLAR_RISK = Decimal(os.getenv("MAX_DOLLAR_RISK", "50"))
 MAX_DAILY_LOSS_DOLLARS = Decimal(os.getenv("MAX_DAILY_LOSS_DOLLARS", "100"))
@@ -50,6 +52,13 @@ class CatalystSource(BaseModel):
 
 
 class Candidate(BaseModel):
+    session_date: date | None = None
+    current_review: CurrentReview | None = None
+    confirmation_review_id: str | None = None
+    data_kind: Literal["MARKET", "SYNTHETIC"]
+    run_id: str | None = None
+    candidate_id: str = Field(min_length=1)
+    source_discovery_item_id: str | None = None
     symbol: str = Field(min_length=1, max_length=12)
     direction: Literal["LONG", "SHORT"]
     journal_trade_id: str | None = None
@@ -60,7 +69,7 @@ class Candidate(BaseModel):
     consolidated_data: bool | None = None
     consolidated_data_required: bool | None = None
 
-    experiment_class: Literal["STRATEGY_1", "INFRASTRUCTURE_TEST"] = "STRATEGY_1"
+    experiment_class: Literal["STRATEGY_1", "INFRASTRUCTURE_TEST"]
     ruleset_version: str = "v0.3"
     market_regime: Literal["Bullish", "Bearish", "Mixed", "Choppy"] | None = None
 
@@ -175,6 +184,11 @@ def evaluate(c: Candidate) -> Decision:
             reasons=[f"Ruleset mismatch: input={c.ruleset_version}, worker={RULESET_VERSION}."],
         )
 
+    evidence_error = evidence_class_problem(c.experiment_class, c.data_kind, c.market_data_source, c.notes)
+    if evidence_error:
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code=evidence_error,
+                        reasons=["Test evidence must be explicitly classified as infrastructure evidence."])
+
     if c.catalyst_tier is None or c.catalyst_summary is None:
         return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="NO_CATALYST", reasons=["No identifiable catalyst."])
     if c.catalyst_tier == "C":
@@ -210,6 +224,17 @@ def evaluate(c: Candidate) -> Decision:
                 risk_per_share=risk_per_share,
                 planned_rr=planned_rr,
             )
+
+    if c.liquidity_ok is False:
+        return Decision(decision="NO_TRADE", operational_state="REJECTED", reason_code="LIQUIDITY_FAILED",
+                        reasons=["Liquidity / execution quality is unacceptable."])
+    if c.target_validated is not True:
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code="TARGET_NOT_VALIDATED",
+                        reasons=["Structural target approval is required before waiting or confirming."])
+    review_error = review_problem(c)
+    if review_error:
+        return Decision(decision="WAIT", operational_state="HOLD_UNRESOLVED", reason_code=review_error,
+                        reasons=["A current attributable review of data, catalyst, qualification, setup and risk is required."])
 
     unresolved = {
         "market regime": c.market_regime,
@@ -341,12 +366,15 @@ def evaluate(c: Candidate) -> Decision:
 
 
 def write_supabase(c: Candidate, d: Decision) -> str:
+    problem = evidence_class_problem(c.experiment_class, c.data_kind, c.market_data_source, c.notes)
+    if problem:
+        raise HTTPException(status_code=422, detail=problem)
     if not SUPABASE_URL or not SUPABASE_SECRET_KEY:
         raise HTTPException(status_code=503, detail="Supabase server credentials are not configured.")
 
     now = datetime.now(timezone.utc)
     record = {
-        "evaluated_at": (c.evaluated_at or now).isoformat(),
+        "evaluated_at": now.isoformat(),
         "experiment_class": c.experiment_class,
         "strategy_id": STRATEGY_ID,
         "decision": d.decision,
@@ -391,6 +419,13 @@ def write_supabase(c: Candidate, d: Decision) -> str:
         "rejection_reasons": d.reasons if d.decision == "NO_TRADE" else [],
         "decision_inputs": {
             **c.decision_inputs,
+            "run_id": c.run_id,
+            "candidate_id": c.candidate_id,
+            "source_discovery_item_id": c.source_discovery_item_id,
+            "session_date": c.session_date.isoformat() if c.session_date else None,
+            "data_kind": c.data_kind,
+            "current_review": c.current_review.model_dump(mode="json") if c.current_review else None,
+            "confirmation_review_id": c.confirmation_review_id,
             "catalyst_cross_source_verified": c.catalyst_cross_source_verified,
             "materiality_rationale": c.materiality_rationale,
             "consolidated_data_required": c.consolidated_data_required,
@@ -419,6 +454,8 @@ def write_supabase(c: Candidate, d: Decision) -> str:
         f"{SUPABASE_URL.rstrip('/')}/rest/v1/strategy_signals",
         headers={
             "apikey": SUPABASE_SECRET_KEY,
+            **({"Authorization": f"Bearer {SUPABASE_SECRET_KEY}"}
+               if SUPABASE_SECRET_KEY.count(".") == 2 else {}),
             "Content-Type": "application/json",
             "Prefer": "return=representation",
         },

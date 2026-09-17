@@ -1,4 +1,6 @@
-# Strategy #1 Shadow Worker v0.1.0
+# Strategy #1 Shadow Worker
+
+See [audit remediation and acceptance guide](AUDIT_REMEDIATION.md) for the current input contract, migration, regression checks, journal writer, and rollout limitations.
 
 Phase 1 shadow-mode worker for Strategy #1 v0.3.
 
