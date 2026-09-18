@@ -11,7 +11,7 @@ from journal_projection import project_run
 from journal_writer import plan,verify
 
 run={"id":"00000000-0000-4000-8000-000000000091","session_date":"2026-09-15",
-     "phase":"PREMARKET","ruleset_version":"v0.3","status":"PARTIAL","candidates_discovered":3,
+     "phase":"PREMARKET","created_at":"2026-09-15T13:00:00Z","ruleset_version":"v0.3","status":"PARTIAL","candidates_discovered":3,
      "experiment_class":"STRATEGY_1", # Local branch fixture only; never inserted in any live DB.
      "notes":"INFRASTRUCTURE_TEST: isolated fixture; excluded from all strategy evidence",
      "channel_status":{"earnings_guidance":"CHECKED_ALPACA_NEWS","cross_source_verification":"REVIEW_REQUIRED"}}
