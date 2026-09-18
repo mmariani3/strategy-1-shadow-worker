@@ -4,6 +4,8 @@ See [audit remediation and acceptance guide](AUDIT_REMEDIATION.md) for the curre
 
 See [research evidence packets and session reports](README-evidence-review.md) for the read-only review pipeline and its remaining acceptance requirements.
 
+See [the opt-in automated research reviewer](README-automated-reviewer.md) for full-master model requests, durable attempt protection and reference comparison. Its outputs remain research-only.
+
 Phase 1 shadow-mode worker for Strategy #1 v0.3.
 
 It accepts structured candidate inputs, returns `TRADE`, `WAIT`, or `NO_TRADE`, and writes every decision to Supabase `public.strategy_signals`.
