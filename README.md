@@ -6,6 +6,8 @@ See [research evidence packets and session reports](README-evidence-review.md) f
 
 See [the opt-in automated research reviewer](README-automated-reviewer.md) for full-master model requests, durable attempt protection and reference comparison. Its outputs remain research-only.
 
+Start with [offline code checks](README-code-review.md) to inspect the complete funnel, calculate objective checks and route missing evidence before any paid model request.
+
 Phase 1 shadow-mode worker for Strategy #1 v0.3.
 
 It accepts structured candidate inputs, returns `TRADE`, `WAIT`, or `NO_TRADE`, and writes every decision to Supabase `public.strategy_signals`.
