@@ -2,6 +2,8 @@
 
 See [audit remediation and acceptance guide](AUDIT_REMEDIATION.md) for the current input contract, migration, regression checks, journal writer, and rollout limitations.
 
+See [research evidence packets and session reports](README-evidence-review.md) for the read-only review pipeline and its remaining acceptance requirements.
+
 Phase 1 shadow-mode worker for Strategy #1 v0.3.
 
 It accepts structured candidate inputs, returns `TRADE`, `WAIT`, or `NO_TRADE`, and writes every decision to Supabase `public.strategy_signals`.
