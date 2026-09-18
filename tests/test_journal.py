@@ -1,5 +1,6 @@
 import copy
 import re
+from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
@@ -114,7 +115,7 @@ def test_lock_contention_prevents_delivery():
 
 
 def test_discovery_funnel_before_any_signal():
-    run={"id":"run","experiment_class":"STRATEGY_1","session_date":"2026-09-15","phase":"PREMARKET","ruleset_version":"v0.3","status":"PARTIAL","candidates_discovered":3}
+    run={"id":"run","experiment_class":"STRATEGY_1","session_date":"2026-09-15","phase":"PREMARKET","created_at":"2026-09-15T13:00:00Z","ruleset_version":"v0.3","status":"PARTIAL","candidates_discovered":3}
     items=[{"id":str(i),"run_id":"run","symbol":"LOCAL","operational_state":state} for i,state in enumerate(["REVIEW_REQUIRED","WATCHLIST_CANDIDATE","REJECTED"])]
     projected=project_run(run,items,[],[])
     assert len(projected)==4
@@ -129,13 +130,47 @@ def test_infrastructure_and_unclassified_runs_excluded(classification):
 
 
 def test_coverage_matches_live_dropdown_without_inferring_completion():
-    run={"id":"run","session_date":"2026-09-15","ruleset_version":"v0.3","status":"PARTIAL",
+    run={"id":"run","session_date":"2026-09-15","phase":"PREMARKET","created_at":"2026-09-15T13:00:00Z","ruleset_version":"v0.3","status":"PARTIAL",
          "channel_status":{"earnings_guidance":"CHECKED_ALPACA_NEWS","cross_source_verification":"REVIEW_REQUIRED"}}
     row=run_projection(run)
     assert row["values"]["Earnings / Guidance"]=="Checked"
     assert row["values"]["Cross-Source Verification"]=="Unavailable"
     assert row["values"]["Scan Status"]=="Partial"
     assert row["trace"]["channel_status"]==run["channel_status"]
+
+
+@pytest.mark.parametrize("phase,label", [("PREMARKET","Premarket"),("POST_OPEN","Post-Open Refresh")])
+@pytest.mark.parametrize("timestamp", ["2026-09-18T06:34:25.927838-07:00", "2026-09-18T13:34:25.927838Z",
+    datetime.fromisoformat("2026-09-18T09:34:25.927838-04:00")])
+def test_scan_metadata_survives_delivery_and_retry(phase,label,timestamp):
+    run={"id":"run","session_date":"2026-09-18","phase":phase,"created_at":timestamp,
+         "updated_at":"2026-09-19T20:00:00Z","ruleset_version":"v0.3","status":"PARTIAL","notes":"Original evidence"}
+    original=copy.deepcopy(run)
+    row=run_projection(run)
+    assert row["values"]["Scan Time"]=="2026-09-18T13:34:25.927838Z"
+    assert f"{phase} ({label})" in row["values"]["Notes"]
+    assert row["values"]["Notes"].endswith("Original evidence")
+    assert row["trace"]["phase"]==phase
+    assert row["trace"]["scan_started_at"]==row["values"]["Scan Time"]
+    sheets,ledger=Sheets([row]),Ledger()
+    assert deliver([row],sheets,ledger)["status"]=="VERIFIED"
+    assert deliver([run_projection(run)],sheets,ledger)["status"]=="NOOP"
+    assert sheets.writes==1 and run==original
+
+
+@pytest.mark.parametrize("bad", [None,"", "not-a-time","2026-09-18", "2026-09-18T13:34:25",
+                                 datetime(2026,9,18,13,34),123])
+def test_missing_or_ambiguous_scan_time_blocks_projection(bad):
+    with pytest.raises(HTTPException) as error:
+        run_projection({"phase":"POST_OPEN","created_at":bad})
+    assert error.value.status_code==409
+
+
+@pytest.mark.parametrize("phase", [None,"", "POSTMARKET"])
+def test_unknown_scan_phase_cannot_be_labeled_postopen(phase):
+    with pytest.raises(HTTPException) as error:
+        run_projection({"phase":phase,"created_at":"2026-09-18T13:34:25Z"})
+    assert error.value.status_code==409
 
 
 @pytest.mark.parametrize("mismatch",[None,"candidate_id","run_id","data_kind"])

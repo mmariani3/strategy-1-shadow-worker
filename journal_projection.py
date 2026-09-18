@@ -1,4 +1,6 @@
 """Human-readable process evidence. Supabase remains the only signal store."""
+from datetime import datetime, timezone
+
 from fastapi import HTTPException
 
 JOURNAL_SPREADSHEET_ID = "1C4BAHQBzgU2hC64yIAHfQkwjSIuPm3pc7i-AIKrbk4w"
@@ -72,17 +74,34 @@ def discovery_projection(item, run):
 
 
 def run_projection(run):
+    phase_labels = {"PREMARKET": "Premarket", "POST_OPEN": "Post-Open Refresh"}
+    phase = run.get("phase")
+    if phase not in phase_labels:
+        raise HTTPException(status_code=409, detail="Discovery phase missing or invalid; no journal write.")
+    try:
+        started = run.get("created_at")
+        if isinstance(started, str):
+            started = datetime.fromisoformat(started.replace("Z", "+00:00"))
+        if not isinstance(started, datetime) or started.utcoffset() is None:
+            raise ValueError("A timezone-aware source timestamp is required.")
+        scan_time = started.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise HTTPException(status_code=409, detail="Scan start timestamp missing or ambiguous; no journal write.") from exc
+    # created_at is the collection start, never the preview/retry time or updated_at.
+    context = f"Discovery phase: {phase} ({phase_labels[phase]}). Scan started at: {scan_time}."
     values = {"Date": str(run["session_date"]), "Run ID": str(run["id"]),
+              "Scan Time": scan_time,
               "Ruleset Version": run["ruleset_version"], "Candidates Discovered": run.get("candidates_discovered") or 0,
               "Scan Status": {"COMPLETE": "Complete", "PARTIAL": "Partial", "DATA_UNAVAILABLE": "Data Unavailable"}.get(run["status"], "Partial"),
-              "Notes": run.get("notes") or ""}
+              "Notes": context + (" " + run["notes"] if run.get("notes") else "")}
     for key, header in CHANNELS.items():
         status = (run.get("channel_status") or {}).get(key)
         values[header] = "Checked" if status in {
             "CHECKED_FRED_RELEASE_CALENDAR", "CHECKED_ALPACA_SCREENER", "CHECKED_ALPACA_NEWS", "Checked"
         } else "Unavailable"
     return {"sheet_name": "Scan Coverage", "key_column": "Run ID", "key": str(run["id"]), "values": values,
-            "trace": {"run_id": str(run["id"]), "channel_status": run.get("channel_status") or {}}}
+            "trace": {"run_id": str(run["id"]), "phase": phase, "scan_started_at": scan_time,
+                      "channel_status": run.get("channel_status") or {}}}
 
 
 def project_run(run, items, candidates, signals):
