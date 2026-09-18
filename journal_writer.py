@@ -12,6 +12,7 @@ from google.auth import default as google_credentials
 from google.auth.transport.requests import AuthorizedSession
 
 from journal_projection import JOURNAL_SPREADSHEET_ID, project_run, candidate_projection
+from journal_native import CELL_FIELDS, address, prepare_patch, requests_for
 
 ALLOWED_SHEETS = {"Premarket Candidates", "Scan Coverage"}
 
@@ -55,10 +56,59 @@ class GoogleSheets:
             raise JournalConflict("Required live Journal tabs missing.")
         return snapshot
 
+    def native_cells(self, patches):
+        bounds = {}
+        for patch in patches:
+            title, row, col = address(patch['range'])
+            if title not in ALLOWED_SHEETS:
+                raise JournalConflict('Unexpected native tab.')
+            r0, r1, c1 = bounds.get(title, (row, row, col))
+            bounds[title] = (min(r0, row), max(r1, row), max(c1, col))
+        ranges = [f"'{name}'!A{r0+1}:{column_name(c1+1)}{r1+1}" for name, (r0, r1, c1) in bounds.items()]
+        if sum((r1-r0+1)*(c1+1) for r0,r1,c1 in bounds.values()) > 200000:
+            raise JournalConflict('Native read exceeds bounded limit.')
+        response = self.http.get(self.base, params={'ranges': ranges, 'fields':
+            f'sheets(properties,merges,protectedRanges,tables,data(startRow,startColumn,rowData(values({CELL_FIELDS}))))'}, timeout=30)
+        response.raise_for_status()
+        cells, ids = {}, {}
+        for sheet in response.json()['sheets']:
+            prop = sheet['properties']; title = prop['title']
+            if title not in bounds:
+                continue
+            if any(sheet.get(k) for k in ('merges','protectedRanges','tables')):
+                raise JournalConflict('Structured or protected sheet requires explicit native review.')
+            ids[title] = prop['sheetId']
+            r0,r1,c1 = bounds[title]
+            grid = prop['gridProperties']
+            if r1 >= grid['rowCount'] or c1 >= grid['columnCount']:
+                raise JournalConflict('Native target outside grid.')
+            for row in range(r0,r1+1):
+                for col in range(c1+1):
+                    cells[f"'{title}'!{column_name(col+1)}{row+1}"] = {}
+            for data in sheet.get('data', []):
+                for row, entry in enumerate(data.get('rowData', []), data.get('startRow', 0)):
+                    for col, cell in enumerate(entry.get('values', []), data.get('startColumn', 0)):
+                        cells[f"'{title}'!{column_name(col+1)}{row+1}"] = cell
+        if set(ids) != set(bounds):
+            raise JournalConflict('Native tab missing.')
+        return cells, ids
+
+    def prepare(self, patches):
+        cells, ids = self.native_cells(patches)
+        return [prepare_patch(p, cells[p['range']], ids[address(p['range'])[0]]) for p in patches]
+
+    def verify_native(self, patches, stage):
+        cells, ids = self.native_cells(patches)
+        for patch in patches:
+            native = patch.get('native') or {}
+            if (native.get('version') != 1 or native.get('sheet_id') != ids[address(patch['range'])[0]]
+                    or cells.get(patch['range']) != native.get(stage)):
+                raise JournalConflict('Native cell mismatch; no delivery completion.')
+
     def write(self, patches):
         # No blind POST retry: the persistent pending delivery gates all later writers.
-        response = self.http.post(self.base + "/values:batchUpdate",
-                                  json={"valueInputOption": "RAW", "data": patches}, timeout=30)
+        response = self.http.post(self.base + ':batchUpdate',
+                                  json={'requests': requests_for(patches)}, timeout=30)
         response.raise_for_status()
 
 
@@ -140,17 +190,37 @@ def deliver(rows, sheets, ledger):
     patches = plan(rows, before)
     if not patches:
         return {"status": "NOOP", "rows": len(rows)}
+    patches = sheets.prepare(patches)
     if sheets.read() != before:
         raise JournalConflict("Journal changed before write; retry from a new live read.")
+    sheets.verify_native(patches, 'before')
     delivery_id = ledger.begin(patches, rows)
     # Persist pending BEFORE crossing systems. Any failure leaves a durable barrier.
     sheets.write(patches)
     after = sheets.read()
     verify(patches, after)
+    sheets.verify_native(patches, 'after')
     if plan(rows, after):
         raise JournalConflict("Source rows do not reconcile after write.")
     ledger.complete(delivery_id)
     return {"status": "VERIFIED", "rows": len(rows), "delivery_id": str(delivery_id)}
+
+
+def reconcile_pending(sheets, ledger):
+    """Read-only external reconciliation: finish an exact successful write, never resend it."""
+    pending = ledger.pending()
+    if not pending:
+        return {'status': 'NO_PENDING'}
+    patches, rows = pending.get('patches'), pending.get('source_rows')
+    if not patches or not rows or any(p.get('native', {}).get('version') != 1 for p in patches):
+        raise JournalConflict('Legacy or incomplete delivery requires explicit reconciliation.')
+    before = sheets.read()
+    verify(patches, before)
+    sheets.verify_native(patches, 'after')
+    if plan(rows, before) or sheets.read() != before:
+        raise JournalConflict('Pending source does not reconcile against stable live state.')
+    ledger.complete(pending['id'])
+    return {'status': 'VERIFIED', 'delivery_id': str(pending['id']), 'sheet_writes': 0}
 
 
 class PostgresLedger:
@@ -158,7 +228,7 @@ class PostgresLedger:
         self.conn, self.spreadsheet_id = conn, spreadsheet_id
 
     def pending(self):
-        return self.conn.execute("select id from public.journal_deliveries where spreadsheet_id=%s and status='PENDING'",
+        return self.conn.execute("select id,patches,source_rows from public.journal_deliveries where spreadsheet_id=%s and status='PENDING'",
                                  (self.spreadsheet_id,)).fetchone()
 
     def begin(self, patches, rows):
@@ -207,6 +277,7 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--run-id", type=UUID)
     group.add_argument("--candidate-id", type=UUID)
+    group.add_argument('--reconcile-pending', action='store_true', help='Verify an ambiguous native delivery without resending it')
     parser.add_argument("--apply", action="store_true", help="Explicitly enable this invocation's Journal writes")
     args = parser.parse_args()
     spreadsheet_id = os.getenv("JOURNAL_SPREADSHEET_ID", JOURNAL_SPREADSHEET_ID)
@@ -214,6 +285,12 @@ def main():
     # Direct/session-pooled connections only. Transaction pooling cannot hold a session lock.
     with psycopg.connect(os.environ["JOURNAL_DATABASE_URL"], autocommit=True, row_factory=dict_row) as conn:
         with writer_lock(conn, spreadsheet_id), conn.transaction():
+            if args.reconcile_pending:
+                if not args.apply or os.getenv('JOURNAL_WRITES_ENABLED', 'false').lower() != 'true':
+                    raise JournalConflict('Reconciliation changes ledger state; explicit apply and enable flag required.')
+                with psycopg.connect(os.environ['JOURNAL_DATABASE_URL'], autocommit=True, row_factory=dict_row) as ledger_conn:
+                    print(json.dumps(reconcile_pending(sheets, PostgresLedger(ledger_conn, spreadsheet_id))))
+                return
             rows = source_rows(conn, args.run_id, args.candidate_id)
             if not args.apply:
                 print(json.dumps({"status": "DRY_RUN", "patches": plan(rows, sheets.read())}))
