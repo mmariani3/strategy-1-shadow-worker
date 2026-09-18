@@ -230,7 +230,7 @@ def test_transport_pins_dns_host_and_bounds_body_without_forwarded_credentials(m
         status=200
         def __init__(self): self.data=io.BytesIO(b'abcde')
         def getheaders(self):return [('Content-Type','text/plain')]
-        def read(self,n):return self.data.read(n)
+        def read1(self,n):return self.data.read(n)
     class Connection:
         def __init__(self,host,ip,timeout):calls.append((host,ip,timeout))
         def request(self,method,path,headers):calls.append((method,path,headers))
@@ -242,3 +242,26 @@ def test_transport_pins_dns_host_and_bounds_body_without_forwarded_credentials(m
     with pytest.raises(FetchBlocked,match='DOCUMENT_TOO_LARGE'):f._get(NEWS)
     assert calls[0][:2]==('news.example.com','93.184.216.34')
     assert not {'Authorization','Cookie','Proxy-Authorization'} & set(calls[1][2])
+
+
+def test_slow_incremental_response_checks_total_deadline(monkeypatch):
+    import public_evidence_http as module
+    clock=[100.0];reads=[]
+    class Response:
+        status=200
+        def getheaders(self): return [('Content-Type','text/plain')]
+        def read1(self,n):
+            reads.append(n);clock[0]+=31
+            return b'x'
+    class Connection:
+        def __init__(self,*args):pass
+        def request(self,*args,**kwargs):pass
+        def getresponse(self):return Response()
+        def close(self):pass
+    monkeypatch.setattr(socket,'getaddrinfo',lambda *a,**k:[(2,1,6,'',('93.184.216.34',443))])
+    monkeypatch.setattr(module,'PinnedHTTPS',Connection)
+    monkeypatch.setattr(module.time,'monotonic',lambda:clock[0])
+    monkeypatch.setattr(module.time,'sleep',lambda _:None)
+    with pytest.raises(FetchBlocked,match='DOCUMENT_TIME_LIMIT'):
+        PublicFetcher(['news.example.com'],'Research test@example.com')._get(NEWS)
+    assert len(reads)==1

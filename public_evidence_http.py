@@ -96,7 +96,9 @@ class PublicFetcher:
             while True:
                 if time.monotonic() > deadline:
                     raise FetchBlocked('DOCUMENT_TIME_LIMIT')
-                chunk = response.read(min(65536, maximum + 1 - count))
+                # read1 returns after one underlying read, so slow incremental responses
+                # cannot keep a buffered read alive indefinitely without deadline checks.
+                chunk = response.read1(min(65536, maximum + 1 - count))
                 if not chunk:
                     break
                 count += len(chunk)
