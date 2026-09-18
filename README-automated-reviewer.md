@@ -26,6 +26,8 @@ Use the actual full document text, SHA-256 of its UTF-8 bytes and truthful read 
 
 ## Prepare without making an API call
 
+The CLI first runs [offline code checks](README-code-review.md). Records with no captured catalyst text are held for evidence retrieval; infrastructure records are excluded from this ordinary research route. Both stop before request preparation or credential access, even with `--dispatch`. For the full funnel, use `run_code_review.py` first. Passing a code check never establishes semantic qualification.
+
 Use the existing development/journal Python environment; this adds no package dependency.
 
 ```text
