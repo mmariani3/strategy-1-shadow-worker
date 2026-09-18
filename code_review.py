@@ -14,7 +14,7 @@ BOOL_FIELDS = set(CURRENT_FIELDS) - {'market_regime', 'realized_daily_loss_dolla
 BOOL_FIELDS |= {'catalyst_material', 'catalyst_verified', 'catalyst_cross_source_verified',
                 'trigger_confirmed', 'clean_structure', 'consolidated_data', 'rvol_consolidated'}
 ENTRY_MODELS = {'opening_range_premarket_high_break', 'vwap_reclaim_rejection', 'first_clean_pullback'}
-SOURCE_KINDS = {'news', 'filing'}
+SOURCE_KINDS = {'news', 'filing', 'retrieved_document'}
 
 
 def implementation():
