@@ -6,15 +6,15 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-### Default CLI: factual research v5
+### Default CLI: factual research v6
 
-The CLI now prepares `1.4.0-automated-research` / `governed-research-v5` requests
-through `research_coverage.prepare_coverage_request`. The old `research_reviewer.prepare_request`,
-`research_facts.prepare_fact_request`, and `research_citations.prepare_selection_request`
-functions remain explicit v2, v3, and v4 compatibility APIs; old requests/results retain their
+The CLI now prepares `1.5.0-automated-research` / `governed-research-v6` requests
+through `research_scoped.prepare_scoped_request`. The old `research_reviewer.prepare_request`,
+`research_facts.prepare_fact_request`, `research_citations.prepare_selection_request`, and
+`research_coverage.prepare_coverage_request` remain explicit v2–v5 compatibility APIs; old requests/results retain their
 original parsers and attribution. No historical output is upgraded or relabeled.
 
-Versions 3 through 5 first ask for five source-backed findings: instrument identity, catalyst
+Versions 3 through 6 first ask for five source-backed findings: instrument identity, catalyst
 event, actual event/announcement timing, publication timing, and document coverage
 (including referenced exhibits absent from the capture). It then assesses catalyst
 freshness, materiality and same-event evidence. Workflow fields remain visible but
@@ -28,10 +28,15 @@ claims otherwise. Their corresponding accepted measurement/review adapters are n
 implemented here. This restricts software capability; it does not change strategy
 rules, live Worker inputs or experimental eligibility.
 
-Version 5 requires each citation to contain a stable excerpt ID and a verbatim
+Versions 5 and 6 require each citation to contain a stable excerpt ID and a verbatim
 `supporting_text` clause. The ID anchors the quote: it must overlap that excerpt,
 but may extend through neighboring excerpts in the **same original source field**.
-The exact readable words must occur uniquely in the original serialized source.
+Version 5 requires whole-source uniqueness. Version 6 permits repeated text only
+when exactly one occurrence within the original field overlaps the selected anchor.
+Two occurrences overlapping the same anchor still fail, including overlapping
+substrings. A longer exact clause may disambiguate them; no location is guessed.
+The server carries the derived offsets through final claim validation instead of
+searching again for the first matching string. The model cannot supply offsets.
 It cannot cross JSON fields, documents, or disjoint passages. This handles sentences
 split by the catalogue without changing the catalogue, source text or old offsets.
 Different source spans can share one anchor ID; an identical source span repeated
@@ -41,7 +46,7 @@ No normalization, fuzzy matching, automatic quote repair or silent deduplication
 Workflow and
 market-snapshot fields remain in the complete packet but have no selectable handles.
 Publication metadata can support publication facts only. Version 3's gates remain
-in force for v5, with duplicate detection now applied to exact spans. These checks detect incorrect attribution, **not** whether a real
+in force for v5/v6, with duplicate detection applied to exact spans. These checks detect incorrect attribution, **not** whether a real
 quotation logically supports the conclusion; semantic review is still required.
 
 The host derives each handle from the original source ID and character offsets.
@@ -61,12 +66,25 @@ truth. Every accepted result remains a research draft requiring independent revi
 #### Materiality coverage is separate from a fact about missing documents
 
 An EVIDENCED `document_coverage` finding may correctly say an exhibit is missing.
-Version 5 requires a separate `materiality_coverage` object with `status`,
+Versions 5 and 6 require a separate `materiality_coverage` object with `status`,
 `missing_documents`, `rationale`, and source-cited `evidence`. Status is one of
 `SUFFICIENT_FOR_RESEARCH`, `INCOMPLETE`, or `UNRESOLVED`. The first requires no
 declared missing required documents and at least one substantive citation; INCOMPLETE
 requires named missing documents. Publication/workflow metadata cannot establish
 coverage. Missing or inconsistent declarations fail closed.
+
+Version 6 additionally requires `assessment_scope` and `missing_document_reasons`
+(one `{document, reason}` for every named missing document). Blank scope, unexplained
+documents, duplicate names, or inconsistent mappings fail. Reasons must identify
+which necessary fact the missing document establishes and why captured evidence
+cannot establish it. The prompt separates optional corroboration and other criterion
+gaps from materiality prerequisites. It does not invent a blanket original-note,
+SEC-filing or primary-source requirement, and does not waive a document required
+by the governing rules or the actual economic conclusion. Reputable reporting of
+an attributable analyst action can support a limited research assessment; it does
+not automatically clear freshness, verification, watchlist or trade requirements.
+Code checks that explanations are present and consistent, **not** that their logic
+is correct. This prompt change still needs fresh provider/semantic testing.
 
 Either a positive or negative materiality conclusion requires sufficient coverage
 plus the existing fact prerequisites. Incomplete or unresolved coverage still permits
@@ -76,6 +94,22 @@ checks cannot detect a document the model omitted from its missing-document list
 prove economic significance, or independently verify that its declared coverage
 is sufficient. This is a research evidence gate, not a strategy approval or changed
 threshold. Coverage from v3/v4 is never implicitly promoted to the new status.
+
+#### Offline v6 verification
+
+All 33 saved original outcomes replay unchanged: 17 accepted results reproduce
+exactly and 16 failures remain rejected, with unchanged original ledger hashes.
+On the latest four saved responses, 55/57 individual selections pass the v6
+resolver. The GPT-5.5 KALU headline is uniquely anchored and resolves; the TRUG
+ticker label remains ambiguous within its anchor and correctly fails. Mini's
+nonexistent KALU handle still fails. No old response or source text was repaired.
+
+Separate derived engineering probes add explicitly author-supplied scope/reason
+placeholders to exercise the new schema and final offsets. KALU GPT-5.5 and TRUG
+Mini pass those structural probes; the other two fail as above. They are not new
+v6 provider responses, corrected historical outcomes or semantic acceptance.
+This offline pass makes zero API calls. Original v5 results remain authoritative
+for those original requests, including their failures.
 
 The five model findings are persisted as `fact_findings` alongside the attributed
 review artifact; the original provider response stays in the immutable ledger.

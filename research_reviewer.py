@@ -50,10 +50,11 @@ def compact_request(request):
     from research_facts import VERSIONS as FACT_VERSIONS
     from research_citations import VERSIONS as SELECTION_VERSIONS
     from research_coverage import VERSIONS as COVERAGE_VERSIONS
+    from research_scoped import VERSIONS as SCOPED_VERSIONS
     versions = (request.get('implementation_version'), request.get('prompt_version'))
     if versions == LEGACY_VERSIONS:
         return False
-    if versions in ((VERSION, PROMPT_VERSION), FACT_VERSIONS, SELECTION_VERSIONS, COVERAGE_VERSIONS):
+    if versions in ((VERSION, PROMPT_VERSION), FACT_VERSIONS, SELECTION_VERSIONS, COVERAGE_VERSIONS, SCOPED_VERSIONS):
         return True
     raise ReviewBlocked('UNSUPPORTED_REQUEST_VERSION')
 
@@ -62,7 +63,10 @@ def request_evidence_message(packet, request):
     from research_facts import VERSIONS as FACT_VERSIONS, fact_evidence_message
     from research_citations import VERSIONS as SELECTION_VERSIONS, selection_evidence_message
     from research_coverage import VERSIONS as COVERAGE_VERSIONS, coverage_evidence_message
+    from research_scoped import VERSIONS as SCOPED_VERSIONS, scoped_evidence_message
     compact = compact_request(request)
+    if (request['implementation_version'], request['prompt_version']) == SCOPED_VERSIONS:
+        return scoped_evidence_message(packet)
     if (request['implementation_version'], request['prompt_version']) == COVERAGE_VERSIONS:
         return coverage_evidence_message(packet)
     if (request['implementation_version'], request['prompt_version']) == SELECTION_VERSIONS:
@@ -208,9 +212,14 @@ def parse_response(packet, request, response, reviewed_at):
     from research_facts import VERSIONS as FACT_VERSIONS, resolve_draft
     from research_citations import VERSIONS as SELECTION_VERSIONS, resolve_selected_draft
     from research_coverage import VERSIONS as COVERAGE_VERSIONS, resolve_coverage_draft
+    from research_scoped import VERSIONS as SCOPED_VERSIONS, resolve_scoped_draft
     facts = None
     coverage = selection_audit = None
-    if (request['implementation_version'], request['prompt_version']) == COVERAGE_VERSIONS:
+    scoped = (request['implementation_version'], request['prompt_version']) == SCOPED_VERSIONS
+    if scoped:
+        resolved, facts, coverage, selection_audit = resolve_scoped_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif (request['implementation_version'], request['prompt_version']) == COVERAGE_VERSIONS:
         resolved, facts, coverage, selection_audit = resolve_coverage_draft(packet, texts[0])
         draft = ModelDraft.model_validate(resolved)
     elif (request['implementation_version'], request['prompt_version']) == SELECTION_VERSIONS:
@@ -223,13 +232,22 @@ def parse_response(packet, request, response, reviewed_at):
         draft = ModelDraft.model_validate_json(texts[0])
     sources = {source['source_id']: source['text'] for source in packet['sources']}
     claims = []
-    for claim in draft.claims:
+    for index, claim in enumerate(draft.claims):
         citations = []
-        for cite in claim.citations:
+        for cite_index, cite in enumerate(claim.citations):
             text = sources.get(cite.source_id, '')
-            start = text.find(cite.quote)
-            if not cite.quote or start < 0 or text.find(cite.quote, start + 1) >= 0:
-                raise ReviewBlocked('QUOTE_MISSING_OR_AMBIGUOUS')
+            if scoped:
+                # Locally derived exact offsets, never supplied by the model.
+                span = selection_audit['claims'][index]['spans'][cite_index]
+                start = span['start']
+                if (span['source_id'] != cite.source_id or span['quote'] != cite.quote
+                        or not cite.quote or start < 0 or span['end'] != start + len(cite.quote)
+                        or text[start:span['end']] != cite.quote):
+                    raise ReviewBlocked('ANCHORED_CITATION_MISMATCH')
+            else:
+                start = text.find(cite.quote)
+                if not cite.quote or start < 0 or text.find(cite.quote, start + 1) >= 0:
+                    raise ReviewBlocked('QUOTE_MISSING_OR_AMBIGUOUS')
             citations.append(dict(source_id=cite.source_id, quote=cite.quote, start=start, end=start+len(cite.quote)))
         claims.append(dict(criterion=claim.criterion, assessment=claim.assessment,
                            rationale=claim.rationale, citations=citations))

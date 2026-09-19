@@ -132,9 +132,13 @@ class SpanResolver:
 
 
 def resolve_coverage_draft(packet, text):
+    return _resolve_coverage_draft(packet, text, SpanResolver(packet))
+
+
+def _resolve_coverage_draft(packet, text, resolver):
+    """Shared gates; each version supplies its own exact citation resolver."""
     from research_reviewer import ReviewBlocked
     draft = CoverageDraft.model_validate_json(text)
-    resolver = SpanResolver(packet)
     converted = draft.model_dump(exclude={'materiality_coverage'})
     audit = {}
     for group in ('facts', 'claims'):
