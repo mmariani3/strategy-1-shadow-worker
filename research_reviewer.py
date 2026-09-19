@@ -11,13 +11,48 @@ import requests
 from evidence_review import (AUTHORITIES, CRITERIA, Strict, aware, canonical, digest,
     reviewer_request, unresolved_draft, validate_draft)
 
-VERSION = '1.0.0-automated-research'
-PROMPT_VERSION = 'governed-research-v1'
+VERSION = '1.1.0-automated-research'
+PROMPT_VERSION = 'governed-research-v2'
 ENDPOINT = 'https://api.openai.com/v1/responses'
+LEGACY_VERSIONS = ('1.0.0-automated-research', 'governed-research-v1')
 
 
 class ReviewBlocked(ValueError):
     """Fixed diagnostic codes only; never echo provider bodies or credentials."""
+
+
+def evidence_message(packet, compact=True):
+    """Lossless transport view: source.text already contains canonical JSON of raw.
+
+    Original packets and citation text are never rewritten. Reconstruction must
+    reproduce every field and the original packet digest before removing a copy.
+    """
+    if not compact:
+        return {'role': 'user', 'content': 'UNTRUSTED_CAPTURED_EVIDENCE:\n' + canonical(packet)}
+    view = deepcopy(packet)
+    ids = set()
+    for item in view['sources']:
+        if (item['source_id'] in ids or item['text'] != canonical(item['raw'])
+                or item['source_id'] != digest({'kind': item['kind'], 'raw': item['raw']})):
+            raise ReviewBlocked('SOURCE_REPRESENTATION_MISMATCH')
+        ids.add(item['source_id'])
+        del item['raw']
+    restored = deepcopy(view)
+    for item in restored['sources']:
+        item['raw'] = json.loads(item['text'])
+    if (canonical(restored) != canonical(packet)
+            or digest({k:v for k,v in restored.items() if k != 'packet_id'}) != packet['packet_id']):
+        raise ReviewBlocked('SOURCE_RECONSTRUCTION_MISMATCH')
+    return {'role': 'user', 'content': 'UNTRUSTED_CAPTURED_EVIDENCE_LOSSLESS_V1:\n' + canonical(view)}
+
+
+def compact_request(request):
+    versions = (request.get('implementation_version'), request.get('prompt_version'))
+    if versions == LEGACY_VERSIONS:
+        return False
+    if versions == (VERSION, PROMPT_VERSION):
+        return True
+    raise ReviewBlocked('UNSUPPORTED_REQUEST_VERSION')
 
 
 class Quote(Strict):
@@ -83,12 +118,16 @@ def prepare_request(packet, masters, model, max_output_tokens, max_input_bytes, 
         'Explain missing evidence and contradictions. For each non-unresolved claim cite exact nonempty source text '
         'that occurs once in that source, using source_id and quote. Return only the requested JSON. '
         'You cannot alter attribution fields, timestamps, identities, operational states or execution eligibility.'
+        '\nTransport encoding: each source.text contains the complete canonical JSON of the original source.raw. '
+        'Only that redundant raw field is omitted. All other packet fields and every source.text character are retained. '
+        'The packet_id identifies the full original packet, not this lossless transport view. '
+        'Cite exact substrings of source.text as before; do not cite a re-serialized or decoded alternative.'
     )
     body = {'model': model, 'store': False, 'tools': [], 'max_output_tokens': max_output_tokens,
         'input': [
             {'role': 'developer', 'content': instructions + '\nGOVERNING_MASTERS:\n' + canonical(masters)
              + '\nCRITERION_REFERENCES:\n' + canonical(CRITERIA)},
-            {'role': 'user', 'content': 'UNTRUSTED_CAPTURED_EVIDENCE:\n' + canonical(packet)}],
+            evidence_message(packet)],
         'text': {'format': {'type': 'json_schema', 'name': 'research_assessment', 'strict': True,
                             'schema': ModelDraft.model_json_schema()}}}
     if len(canonical(body).encode('utf-8')) > max_input_bytes:
@@ -121,6 +160,7 @@ class OpenAIReviewer:
 
 
 def parse_response(packet, request, response, reviewed_at):
+    compact_request(request)  # Preserve supported historical attribution, reject unknown versions.
     if not isinstance(response, dict) or response.get('status') != 'completed':
         raise ReviewBlocked('PROVIDER_NOT_COMPLETED')
     if not response.get('id') or not isinstance(response.get('model'), str) or not response['model'].strip():
@@ -151,13 +191,13 @@ def parse_response(packet, request, response, reviewed_at):
         claims.append(dict(criterion=claim.criterion, assessment=claim.assessment,
                            rationale=claim.rationale, citations=citations))
     review = unresolved_draft(packet, reviewed_at)
-    review.update(reviewer_id='openai-responses-research', implementation_version=VERSION,
-        model_id=response['model'], prompt_version=PROMPT_VERSION, claims=claims, limitations=draft.limitations + [
+    review.update(reviewer_id='openai-responses-research', implementation_version=request['implementation_version'],
+        model_id=response['model'], prompt_version=request['prompt_version'], claims=claims, limitations=draft.limitations + [
             'Automated research draft only; semantic correctness has not been independently established.',
             'Captured evidence is not a prospective approval; no trade handoff is permitted.'])
     artifact = validate_draft(packet, review, reviewed_at)
     return {'request_id': request['request_id'], 'provider_response_id': response['id'],
         'requested_model': request['body']['model'], 'returned_model': response['model'],
-        'prompt_version': PROMPT_VERSION, 'masters_digest': request['masters_digest'],
+        'prompt_version': request['prompt_version'], 'masters_digest': request['masters_digest'],
         'usage': deepcopy(response.get('usage')), 'review_artifact': artifact,
         'admission': 'RESEARCH_ONLY', 'eligible_for_handoff': False}

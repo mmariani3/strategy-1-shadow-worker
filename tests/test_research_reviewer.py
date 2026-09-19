@@ -75,7 +75,7 @@ def test_model_metadata_is_host_attributed_and_never_approval(prepared):
     artifact = result['review_artifact']
     assert artifact['review']['model_id'] == 'offline-fixture-model-snapshot'
     assert artifact['review']['reviewed_at'] == NOW
-    assert artifact['review']['prompt_version'] == 'governed-research-v1'
+    assert artifact['review']['prompt_version'] == 'governed-research-v2'
     assert artifact['trace'] == p['trace'] and artifact['semantic_verification'] == 'NOT_ESTABLISHED'
     assert not artifact['eligible_for_handoff'] and not result['eligible_for_handoff']
     assert result['usage']['output_tokens'] == 20

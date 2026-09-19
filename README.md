@@ -8,6 +8,8 @@ See [the opt-in automated research reviewer](README-automated-reviewer.md) for f
 
 Start with [offline code checks](README-code-review.md) to inspect the complete funnel, calculate objective checks and route missing evidence before any paid model request.
 
+Use [public source collection](README-source-collection.md) to capture recorded SEC/news/company-release URLs into an append-only local research store, preserving the original discovery evidence.
+
 Phase 1 shadow-mode worker for Strategy #1 v0.3.
 
 It accepts structured candidate inputs, returns `TRADE`, `WAIT`, or `NO_TRADE`, and writes every decision to Supabase `public.strategy_signals`.

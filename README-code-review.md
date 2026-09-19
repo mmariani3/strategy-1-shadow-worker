@@ -36,6 +36,8 @@ Risk calculations are research arithmetic under the documented hard ceilings, in
 
 ## Routing and cost control
 
+The [public source collector](README-source-collection.md) can add later-retrieved document text in a new, explicitly linked research packet. The original packet and its discovery time are preserved. `retrieved_document` sources are inventoried like captured news/filing text; this changes source availability only, never semantic qualification.
+
 - `EXCLUDED_INFRASTRUCTURE`: preserve classification and exclude from ordinary strategy research requests.
 - `NEEDS_SOURCE_EVIDENCE`: no captured news/filing text to interpret. Retrieve evidence first. This is not a rejection or proof of no opportunity.
 - `REVIEW_REQUIRED`: some captured text exists; qualitative review remains necessary. Text presence says nothing about relevance, credibility or sufficiency.

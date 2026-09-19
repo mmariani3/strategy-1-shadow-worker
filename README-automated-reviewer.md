@@ -14,6 +14,14 @@ The client supplies no tools, uses a fixed HTTPS endpoint, disables redirects an
 
 Matching citations establish provenance only. A supported claim can still be wrong; all outputs remain `RESEARCH_ONLY`, `eligible_for_handoff=false`, `semantic_verification=NOT_ESTABLISHED`. Existing snapshot approvals are not refreshed. This initial reviewer assesses captured evidence retrospectively and cannot produce prospective confirmation.
 
+### Lossless source encoding
+
+Reviewer implementation `1.1.0-automated-research` / prompt `governed-research-v2` sends each source's complete `text` once. That field already contains the canonical JSON representation of `raw`; sending both duplicated the same evidence. Before omitting the redundant `raw` field from the transport view, the code verifies matching representations, unique source IDs, source digests, and exact reconstruction of every original packet field and its digest. Original packet files, source text, citation offsets, IDs, trace, timestamps, negative evidence and full governing masters remain unchanged. Nothing is summarized, selected by keyword or silently truncated.
+
+Request identity changes with the explicitly versioned encoding. `review_attempts.py` checks the exact version-appropriate evidence message before reserving a call. Supported v1 historical requests/results retain their own implementation and prompt attribution and can recover saved responses without a new provider call. Unknown/mismatched versions fail closed; an existing ledger's call budget is not reset. This is transport compatibility, not acceptance of model accuracy or a change to strategy methodology.
+
+Measured on the September 18 research collection: TEN's request fell from 402,869 to 232,450 UTF-8 bytes, below the existing 250,000-byte limit. After recovering a separate long FEAM filing, its complete request is still 661,821 bytes and remains blocked. Source collection and model-request limits are different; neither is a token count, cost estimate or model-context guarantee. The API continues to receive developer instructions and untrusted user evidence as separate inputs, consistent with [OpenAI text-generation documentation](https://developers.openai.com/api/docs/guides/text).
+
 ## Private master manifest
 
 Each entry of the `strategy`, `experiment`, `automation` object has:
