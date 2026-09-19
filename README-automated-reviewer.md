@@ -10,8 +10,8 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 The default CLI now prepares `1.9.0-automated-research` /
 `governed-research-v10` through `research_subjects.prepare_subject_request`.
-This is an offline-tested infrastructure proposal; **no v10 provider calls or
-independent semantic acceptance have occurred**.
+This is an infrastructure proposal with offline checks and a four-call provider
+compatibility check. **Independent semantic acceptance has not occurred**.
 
 The v9 FXY responses named the Bank of Japan in prose but left the required
 read-through ticker field null. v10 records an event subject with a kind, name,
@@ -56,10 +56,61 @@ conflicts, wrong fact roles, stock-universe and operational boundaries, stable
 typed IDs and gap links, optional follow-ups, lossless inputs/schema limits,
 prebilling tampering, default CLI without credentials and durable historical
 replay. Read-only replay preserves all 77 provider outcomes (38 admitted research
-results and 39 rejections); eleven ledger hashes are unchanged. Twelve reused
-development requests prepare losslessly at 87,638–93,883 bytes and remain unsent.
-No database migration, API spending, production/Journal write, merge or deployment.
-Provider compatibility and independent semantic acceptance remain outstanding.
+results and 39 rejections); eleven ledger hashes are unchanged. The initial offline
+pass prepared twelve reused development requests losslessly at 87,638–93,883
+bytes, with no API calls or credential access during that pass.
+
+#### v10 provider compatibility check — September 19, 2026
+
+Four of those requests were subsequently dispatched through the unchanged actual
+CLI: FXY and IREN, each with Mini and GPT-5.5. Full sources/masters and the existing
+12,000-output-token / 250,000-input-byte allowances were retained. The scope,
+reference, runtime tree and eleven previous ledger hashes were frozen before
+dispatch. These are reused development cases, not independent acceptance cases.
+
+| Case | Model | Local result | Usage-priced cost |
+| --- | --- | --- | ---: |
+| FXY | GPT-5 mini | Blocked: `FACT_ROLE_MISMATCH` | $0.02019675 |
+| FXY | GPT-5.5 | Research draft; exact replay | $0.25065500 |
+| IREN | GPT-5 mini | Blocked: `FACT_ROLE_MISMATCH` | $0.01880375 |
+| IREN | GPT-5.5 | Research draft; exact replay | $0.22658500 |
+
+All four provider responses completed; there were no retries, substitutions,
+repairs or runtime changes. Total usage-priced cost was **$0.51624050**. Both
+models named Bank of Japan as ORGANIZATION without a ticker and IREN Ltd. as
+ISSUER with IREN. Mini assigned incorrect roles to document-coverage facts and
+was blocked. GPT-5.5's two results retain `eligible_for_handoff=false`; no internal
+compatibility key leaked. All 165 individual excerpt selections resolved,
+including repeated occurrences. This checks locations, not semantic correctness.
+Exact replay preserves both admissions and both rejections; all eleven earlier
+ledger hashes remain unchanged. New ledger SHA-256:
+`2b6dd98345fc1438c59bef8a5cf040ee9c4714c0a68b39c5b0fd0d5b2fa476ff`.
+
+Source-backed implementation-author review found:
+
+- **Mini / FXY:** conflates publication metadata with event clock time, asserts
+  materiality for an unresolved non-stock target, and bundles primary documents
+  and corroboration into materiality gaps. Positive materiality also conflicts
+  with its own incomplete coverage.
+- **Mini / IREN:** preserves the conditional approval and unresolved event date,
+  but asserts positive materiality despite incomplete coverage and treats absent
+  primary documents as prerequisites. The Tier A assessment is not established.
+- **GPT-5.5 / FXY:** keeps BOJ separate from FXY, does not establish stock-universe
+  eligibility or materiality, and separates reported event date from publication
+  time. Its proposed need for full instrument mechanics remains unestablished;
+  further documents cannot authorize a currency-trust strategy.
+- **GPT-5.5 / IREN:** separately selects the JPMorgan analyst action, preserves
+  September 14 versus September 18 publication, and treats original analyst
+  notes as optional. Its narrow Tier B research is consistent with captured
+  reporting and the catalyst framework, without trade or freshness authority.
+
+All four drafts leave freshness and eight operational criteria insufficient;
+none establishes independent same-event verification. These admission counts
+are not accuracy scores. Author review is not independent semantic acceptance.
+LRCX/GIPR v10 prompt behavior was not tested in this small scope. No database
+migration, production/Journal write, merge or deployment occurred. Independent
+source-backed assessment and approved live policy/adapters remain outstanding;
+neither model is accepted for unattended qualification.
 
 ### Historical evidence gaps and follow-ups v9
 
