@@ -84,7 +84,8 @@ by the governing rules or the actual economic conclusion. Reputable reporting of
 an attributable analyst action can support a limited research assessment; it does
 not automatically clear freshness, verification, watchlist or trade requirements.
 Code checks that explanations are present and consistent, **not** that their logic
-is correct. This prompt change still needs fresh provider/semantic testing.
+is correct. The fresh provider check below exercises this contract; independent
+semantic acceptance remains outstanding.
 
 Either a positive or negative materiality conclusion requires sufficient coverage
 plus the existing fact prerequisites. Incomplete or unresolved coverage still permits
@@ -110,6 +111,27 @@ Mini pass those structural probes; the other two fail as above. They are not new
 v6 provider responses, corrected historical outcomes or semantic acceptance.
 This offline pass makes zero API calls. Original v5 results remain authoritative
 for those original requests, including their failures.
+
+#### Fresh v6 provider regression (September 19, 2026)
+
+Four unchanged-limit CLI calls on the previously tested KALU/TRUG cases completed
+at commit `baf4a34a01ebc6f36071839796e2c7f2b76a6075`. GPT-5.5 passed both contracts
+with 29/29 exact selections, gave a limited Tier B KALU assessment, and kept TRUG
+materiality/freshness unresolved. Mini's KALU response still used an invalid ID
+three times; its TRUG citations matched, but duplicated document-name fields
+differed and failed the required mapping. No repair or retry occurred.
+
+Mini stopped demanding an original note for KALU, but retained unsupported
+universal primary/corroborating-document requirements for TRUG. The stronger
+model's missing-document reasons were more specific; they are not independently
+verified, and its TRUG common-share wording exceeds the article's generic stock
+description. All outputs remain research-only and ineligible for handoff.
+
+Calculated cost: $0.4754808 across four calls. This is a development regression,
+not independent accuracy evidence. Both admitted results replay exactly. The
+403-test result applies to the unchanged runtime; this later update is documentation
+only. Additional API tests require checking balance/cost without weakening test
+models, cases or limits to fit an insufficient balance.
 
 The five model findings are persisted as `fact_findings` alongside the attributed
 review artifact; the original provider response stays in the immutable ledger.
