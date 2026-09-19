@@ -92,7 +92,13 @@ infrastructure fixtures, not trades or strategy observations. Version 5 adds exa
 cross-boundary source spans, distinct quotes sharing anchors, repeated source-span
 rejection, separate completeness status, missing-document conflicts and useful
 research-only outputs with incomplete evidence. It has been checked offline against
-saved v4 responses; no fresh provider response to the v5 schema has yet been tested.
+saved v4 responses and in a bounded four-call v5 provider regression on MEDS/BIAF.
+GPT-5.5 passed both cases; Mini passed BIAF and was rejected for two altered MEDS
+quotations. All four declared incomplete materiality coverage and kept materiality
+unresolved. This development-informed sample is not independent accuracy evidence
+and does not test a real provider's sufficient-coverage conclusion. Two Mini calls
+took more than 60 seconds end-to-end using the acceptance transport's 180-second
+read timeout; the CLI's 60-second read timeout still needs operational verification.
 
 - The complete text of the three governing masters, with matching document IDs, versions, revisions and content digests. This text comes from a separate authorized document read, not discovery sources or model output.
 - Every source in one immutable evidence packet, clearly separated as untrusted data. Source instructions cannot add tools or broker permissions.
