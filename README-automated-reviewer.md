@@ -6,13 +6,80 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-### Default CLI: factual research v7
+### Default CLI: target and event research v8
 
-The CLI now prepares `1.6.0-automated-research` / `governed-research-v7` requests
-through `research_bounded.prepare_bounded_request`. The old `research_reviewer.prepare_request`,
+The CLI now prepares `1.7.0-automated-research` / `governed-research-v8` through
+`research_context.prepare_context_request`. This is an offline-tested new contract;
+**no paid v8 provider call or independent semantic acceptance has occurred**.
+
+The response identifies the packet's target symbol/instrument, its stock-universe
+evidence, and one selected event with its actual subject. Direct events must name
+the target; read-through events identify the other subject and separately cite the
+economic link to the target. Every claim and materiality assessment names the
+target. Instrument/event facts are checked against the corresponding subject.
+Non-insufficient conclusions require evidenced stock-universe and event-link
+declarations with substantive citations. ETF/warrant/right/unknown declarations
+cannot establish the stock universe. They can still produce unresolved research
+facts; this does not authorize an ETF strategy or reject a trade automatically.
+
+The host derives a content-bound selected-event ID and preserves it with claim,
+fact and coverage scope plus the packet's existing trace IDs. This is identity
+within the research artifact, not a verified global event identifier. Scope/link
+labels remain model assertions: a model can still attach incorrect prose to a
+correct symbol, or claim that irrelevant text proves a link. These structural
+checks **do not establish semantic truth, economic significance or eligibility**.
+
+`catalyst_freshness` must remain `INSUFFICIENT_EVIDENCE` in v8. The component has
+no approved freshness-policy evaluator or accepted current-review input. It keeps
+observed event dates separately from publication dates but cannot pass or fail
+freshness from those dates. A future policy adapter needs its own governed review;
+there is no new age cutoff, same-day-only rule or change to Strategy Rules. The
+eight existing non-catalyst capability restrictions remain unchanged.
+
+For citations the model selects only `[{excerpt_id}]`. The host attaches the
+**entire exact selected excerpt**, with original source ID and offsets. It does
+not generate, repair or search for a rewritten quotation. Multiple adjacent
+excerpts can be selected separately; no cross-field stitching occurs. Unknown,
+padded or duplicate IDs and model-supplied quotes/offsets are rejected. Whole
+excerpts can contain irrelevant context, so valid citation location does not prove
+entailment. Complete original packet text remains lossless and visible, including
+repeated text that the unchanged catalogue cannot index uniquely.
+
+The packet-specific schema binds citation choices and target symbols. Schema,
+evidence and packet binding are checked before reservation/provider dispatch and
+again on response parsing. Full inputs, existing byte/output limits and no-retry
+behavior remain. The new single prompt contract separates event occurrence from
+materiality and required documents from optional corroboration. Removing generated
+quote repetitions may improve output completeness, but **provider reliability and
+the earlier Mini output-limit failure are not proven fixed by offline tests**.
+
+Historical v1–v7 requests use their original parsers and preserve original outcomes.
+No failed historical response is converted into v8 or relabeled as accepted. The
+single document/reason list and all legacy substantive-category, coverage and
+same-event source gates remain. A two-source implementation restriction does not
+change the masters' most-direct-credible-source rule into a universal news-source
+count requirement.
+
+Offline validation: **489 tests passed**, including 55 v8 regressions. Read-only
+replay preserved all 53 saved outcomes: 27 exact admitted results, 26 rejections,
+nine unchanged ledger hashes. Twelve full requests for the six development cases
+prepare without truncation at 83,678–98,442 bytes, with unchanged model choices and
+12,000 output-token allowance. They remain unsent. These are infrastructure checks,
+not Strategy #1 evidence or independent assessment. No schema migration is needed;
+the new binding data lives in versioned local JSON. No merge/deployment or live
+configuration verification is included.
+
+The strict JSON schema uses the documented required fields, closed objects,
+definitions and bounded enums in [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs),
+checked September 19, 2026. Actual compatibility still needs a bounded provider test.
+
+### Historical factual research v3–v7
+
+The explicit `research_bounded.prepare_bounded_request` prepares historical
+`1.6.0-automated-research` / `governed-research-v7` requests. The old `research_reviewer.prepare_request`,
 `research_facts.prepare_fact_request`, `research_citations.prepare_selection_request`, and
 `research_coverage.prepare_coverage_request` and `research_scoped.prepare_scoped_request`
-remain explicit v2–v6 compatibility APIs; old requests/results retain their
+remain explicit v2–v6 compatibility APIs; all old requests/results retain their
 original parsers and attribution. No historical output is upgraded or relabeled.
 
 Versions 3 through 7 first ask for five source-backed findings: instrument identity, catalyst

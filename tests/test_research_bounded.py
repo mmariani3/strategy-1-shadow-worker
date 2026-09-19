@@ -188,9 +188,9 @@ def test_original_response_and_attribution_survive_restart(bounded_case):
 
 
 @pytest.mark.parametrize('mock_review_route', [False,True])
-def test_cli_defaults_v7_and_preparation_never_loads_key_or_dispatches(bounded_case,masters,monkeypatch,capsys,mock_review_route):
+def test_cli_v7_compatibility_and_preparation_never_loads_key_or_dispatches(bounded_case,masters,monkeypatch,capsys,mock_review_route):
     import run_research_reviewer as cli
-    assert cli.prepare_request is prepare_bounded_request
+    monkeypatch.setattr(cli,'prepare_request',prepare_bounded_request)
     packet, _ = bounded_case; root = ledger_path().parent
     packet_file = root/'packet.json'; master_file = root/'masters.json'
     packet_file.write_text(canonical(packet),encoding='utf-8')

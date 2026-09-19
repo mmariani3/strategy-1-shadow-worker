@@ -90,6 +90,9 @@ def execute_once(ledger, packet, request, provider, clock=utc_now):
     from research_bounded import VERSIONS as BOUNDED_VERSIONS, validate_bounded_request
     if (request['implementation_version'], request['prompt_version']) == BOUNDED_VERSIONS:
         validate_bounded_request(packet, request)
+    from research_context import VERSIONS as CONTEXT_VERSIONS, validate_context_request
+    if (request['implementation_version'], request['prompt_version']) == CONTEXT_VERSIONS:
+        validate_context_request(packet, request)
     claimed = ledger.claim(request, clock())
     history = ledger.events(request['request_id'])
     if 'COMPLETED' in history:
