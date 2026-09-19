@@ -9,8 +9,8 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 ### Default CLI: target and event research v8
 
 The CLI now prepares `1.7.0-automated-research` / `governed-research-v8` through
-`research_context.prepare_context_request`. This is an offline-tested new contract;
-**no paid v8 provider call or independent semantic acceptance has occurred**.
+`research_context.prepare_context_request`. Offline regressions and a bounded
+12-call provider test are complete. **Independent semantic acceptance has not occurred.**
 
 The response identifies the packet's target symbol/instrument, its stock-universe
 evidence, and one selected event with its actual subject. Direct events must name
@@ -50,8 +50,9 @@ evidence and packet binding are checked before reservation/provider dispatch and
 again on response parsing. Full inputs, existing byte/output limits and no-retry
 behavior remain. The new single prompt contract separates event occurrence from
 materiality and required documents from optional corroboration. Removing generated
-quote repetitions may improve output completeness, but **provider reliability and
-the earlier Mini output-limit failure are not proven fixed by offline tests**.
+quote repetitions may improve output completeness. All twelve fresh provider
+responses completed in the development retest below; this does not establish
+reliability on independent cases or prove the output-limit failure cannot recur.
 
 Historical v1–v7 requests use their original parsers and preserve original outcomes.
 No failed historical response is converted into v8 or relabeled as accepted. The
@@ -64,14 +65,70 @@ Offline validation: **489 tests passed**, including 55 v8 regressions. Read-only
 replay preserved all 53 saved outcomes: 27 exact admitted results, 26 rejections,
 nine unchanged ledger hashes. Twelve full requests for the six development cases
 prepare without truncation at 83,678–98,442 bytes, with unchanged model choices and
-12,000 output-token allowance. They remain unsent. These are infrastructure checks,
+12,000 output-token allowance. Those twelve requests were subsequently sent in the
+frozen provider comparison below. These are infrastructure checks,
 not Strategy #1 evidence or independent assessment. No schema migration is needed;
 the new binding data lives in versioned local JSON. No merge/deployment or live
 configuration verification is included.
 
 The strict JSON schema uses the documented required fields, closed objects,
 definitions and bounded enums in [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs),
-checked September 19, 2026. Actual compatibility still needs a bounded provider test.
+checked September 19, 2026. Actual schema compatibility was exercised by the
+bounded provider test below.
+
+### v8 provider comparison: development regressions, September 19, 2026
+
+The actual CLI sent the twelve frozen requests for PANW, FBRT, AIEQ, SDST, LCID
+and GEV, each to `gpt-5-mini` and `gpt-5.5`. Full packets and living masters,
+12,000 output tokens and 250,000 input bytes were retained. Runtime, prompts and
+inputs stayed frozen; no retries, repairs or substitutions occurred. Living
+Strategy v0.3, Experiment v0.5 and Automation v0.4 revisions were reread and matched.
+
+| Model | Completed provider responses | Admitted research drafts | Calculated cost |
+| --- | ---: | ---: | ---: |
+| Mini | 6/6 | 0/6 | $0.10629025 |
+| GPT-5.5 | 6/6 | 6/6 | $1.309635 |
+| Total | 12/12 | 6/12 | $1.41592525 |
+
+All **283/283 fixed excerpt selections** resolved exactly to original source
+locations. This is location integrity, not semantic accuracy; whole-excerpt
+selection counts are not directly comparable with historical generated clauses.
+All twelve kept freshness and the eight non-catalyst criteria insufficient.
+Both models preserved AIEQ as an ETF with unresolved stock-universe eligibility.
+Mini's earlier LCID output-limit failure did not recur in this sample.
+
+Mini PANW/FBRT/AIEQ/LCID failed substantive-source binding because publication
+metadata was selected for target/event evidence. SDST/GEV failed contradictory
+coverage declarations: sufficient research plus necessary missing documents.
+Other Mini reasoning issues remain, including event/publication confusion,
+unsupported document requirements and unjustified catalyst-tier conclusions.
+
+Technical admission does not establish semantic correctness. GPT-5.5 still:
+
+- Requires the SDST legal opinion without identifying the necessary economic
+  fact it would resolve; absence alone does not justify that requirement.
+- Marks GEV same-event verification `OBSERVED_FAILURE` because independent
+  corroboration is missing. Missing corroboration should remain insufficient,
+  rather than being promoted to an observed contradictory outcome.
+- Omits some secondary-event dates, deadlines and numerical distinctions from
+  the unchanged author rubric. v8 selects one event; an unassessed secondary
+  event is recorded as NOT_ESTABLISHED, not automatically incorrect.
+
+The original 30 per-case expectations and four common expectations were retained
+and annotated against immutable responses. They are author assessments on reused,
+correlated development cases (PANW/FBRT share an article), **not independent
+acceptance, representative accuracy or Strategy #1 evidence**. Neither model is
+accepted for unattended operation. Do not relax evidence gates to improve counts.
+
+All six admitted results replay exactly; all nine prior ledger hashes are
+unchanged. Across all campaigns there are now 65 preserved outcomes: 33 admitted
+research drafts and 32 non-admitted responses. Calculated cumulative testing cost
+is $7.7711474. Runtime is unchanged from the previously verified 489-test tree
+`da252669d47b9cac1ff4a0bce76f60afd22193ae` (local `a2b9794258a04d9926f291dd826392ae682f7503`,
+GitHub `d41f1bc57a54eaa8e00dfe6b81febd428d445591`); this results update changes only
+documentation. Private packets, responses, ledgers and author annotations remain
+local. No merge, deployment, Journal write or execution occurred. Live production
+configuration was not reverified.
 
 ### Historical factual research v3–v7
 
