@@ -6,9 +6,67 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-### Default CLI: target and event research v8
+### Default CLI: evidence gaps and follow-ups v9
 
-The CLI now prepares `1.7.0-automated-research` / `governed-research-v8` through
+The default CLI prepares `1.8.0-automated-research` / `governed-research-v9`
+through `research_gaps.prepare_gap_request`. This is an **offline-tested new
+contract with no v9 paid calls or independent semantic acceptance yet**.
+
+The v8 comparison below exposed two admitted semantic problems: treating absent
+independent corroboration as an observed failure, and requiring an absent legal
+opinion without establishing a necessary economic fact. v9 changes the research
+contract rather than relabeling those historical results:
+
+- `same_event_verification=OBSERVED_FAILURE` is unavailable in this component:
+  it has no approved contradiction adjudicator. Missing corroboration, shared
+  origin, different events and proposed conflicts remain insufficient, with an
+  explicit `verification_basis` retained for later review. Proposed positive
+  corroboration keeps the existing two-substantive-source gate and still does
+  not prove independence. This is a software capability limit, not a change to
+  the masters' source requirements or strategy rejection rules.
+- Coverage identifies **missing facts** with their relevance and the limitation
+  of captured evidence. Genuine gaps still block non-insufficient materiality.
+  Declaring coverage sufficient with a gap, or incomplete solely because a
+  document is absent, is rejected.
+- Documents are separately recorded as proposed follow-ups with a question,
+  reason and optional link to a factual gap. The host marks every one
+  `PROPOSAL_ONLY_NOT_AN_APPROVED_REQUIREMENT`. A document suggestion cannot alone
+  block an otherwise supported narrow research assessment. No automatic
+  retrieval, approved document mandate, or strategy prerequisite is created.
+- Gaps and follow-ups retain exact citations, target/event context and stable
+  content-bound gap IDs. Compatibility fields from historical validators do
+  not leak into v9 persisted records as `missing_documents` requirements.
+- Target/event binding citation choices are restricted to substantive source
+  excerpts in the provider schema as well as locally. Publication metadata is
+  still available for publication facts. Both full source packets and governing
+  masters remain lossless; schema/input limits fail without truncation.
+
+The target/ETF, fixed excerpt, freshness, non-catalyst, scope, trace, no-retry and
+research-only boundaries from v8 remain. Historical v1–v8 parsers/results retain
+their original attribution and outcomes. The CLI compatibility test for v8 now
+selects its old preparer explicitly.
+
+Validation: **538 tests passed, including 49 v9 regressions**. Tests reproduce an
+old structurally admissible two-source failure and show v9 rejects it while v8
+replay stays identical; optional follow-ups do not block narrow materiality, real
+gaps do; required-document injection, gap linkage/authority tampering, invalid
+source categories and prebilling schema tampering fail closed. Read-only replay
+preserves 65 actual-provider outcomes (33 admitted, 32 non-admitted), with ten
+unchanged ledger hashes. Twelve full v9 development requests prepare without
+dispatch. New unused-source cases and author references are prepared locally;
+these are infrastructure research, not Strategy #1 observations.
+
+**Remaining limitation:** these gates cannot prove a model's prose, proposed gap,
+economic significance, or positive corroboration judgment. A model can still
+describe an unnecessary gap in plausible language. Those declarations remain
+unverified; a document's necessary status is never approved by this adapter.
+Fresh provider behavior and independent semantic review remain outstanding.
+Neither model is accepted for unattended qualification. No database migration,
+production configuration change, Journal write, merge or deployment is included.
+
+### Historical target and event research v8
+
+The explicit v8 preparer uses `1.7.0-automated-research` / `governed-research-v8` through
 `research_context.prepare_context_request`. Offline regressions and a bounded
 12-call provider test are complete. **Independent semantic acceptance has not occurred.**
 

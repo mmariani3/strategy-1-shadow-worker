@@ -281,9 +281,9 @@ def test_incomplete_provider_response_not_repaired_or_retried(context_case):
 
 
 @pytest.mark.parametrize('mock_review_route',[False,True])
-def test_cli_defaults_v8_no_credential_access_or_dispatch(context_case,masters,monkeypatch,capsys,mock_review_route):
+def test_explicit_v8_cli_compatibility_no_dispatch(context_case,masters,monkeypatch,capsys,mock_review_route):
     import run_research_reviewer as cli
-    assert cli.prepare_request is prepare_context_request
+    monkeypatch.setattr(cli,'prepare_request',prepare_context_request)
     p,_=context_case;root=ledger_path().parent
     pf=root/'packet.json';mf=root/'masters.json'
     pf.write_text(canonical(p),encoding='utf-8');mf.write_text(canonical(masters),encoding='utf-8')

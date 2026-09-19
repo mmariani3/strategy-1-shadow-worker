@@ -53,15 +53,17 @@ def compact_request(request):
     from research_scoped import VERSIONS as SCOPED_VERSIONS
     from research_bounded import VERSIONS as BOUNDED_VERSIONS
     from research_context import VERSIONS as CONTEXT_VERSIONS
+    from research_gaps import VERSIONS as GAP_VERSIONS
     versions = (request.get('implementation_version'), request.get('prompt_version'))
     if versions == LEGACY_VERSIONS:
         return False
-    if versions in ((VERSION, PROMPT_VERSION), FACT_VERSIONS, SELECTION_VERSIONS, COVERAGE_VERSIONS, SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS):
+    if versions in ((VERSION, PROMPT_VERSION), FACT_VERSIONS, SELECTION_VERSIONS, COVERAGE_VERSIONS, SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS):
         return True
     raise ReviewBlocked('UNSUPPORTED_REQUEST_VERSION')
 
 
 def request_evidence_message(packet, request):
+    from research_gaps import VERSIONS as GAP_VERSIONS
     from research_context import VERSIONS as CONTEXT_VERSIONS, context_evidence_message
     from research_facts import VERSIONS as FACT_VERSIONS, fact_evidence_message
     from research_citations import VERSIONS as SELECTION_VERSIONS, selection_evidence_message
@@ -69,7 +71,7 @@ def request_evidence_message(packet, request):
     from research_scoped import VERSIONS as SCOPED_VERSIONS, scoped_evidence_message
     from research_bounded import VERSIONS as BOUNDED_VERSIONS
     compact = compact_request(request)
-    if (request['implementation_version'], request['prompt_version']) == CONTEXT_VERSIONS:
+    if (request['implementation_version'], request['prompt_version']) in (CONTEXT_VERSIONS, GAP_VERSIONS):
         return context_evidence_message(packet)
     if (request['implementation_version'], request['prompt_version']) in (SCOPED_VERSIONS, BOUNDED_VERSIONS):
         return scoped_evidence_message(packet)
@@ -221,12 +223,17 @@ def parse_response(packet, request, response, reviewed_at):
     from research_scoped import VERSIONS as SCOPED_VERSIONS, resolve_scoped_draft
     from research_bounded import VERSIONS as BOUNDED_VERSIONS, resolve_bounded_draft, validate_bounded_request
     from research_context import VERSIONS as CONTEXT_VERSIONS, resolve_context_draft, validate_context_request
+    from research_gaps import VERSIONS as GAP_VERSIONS, resolve_gap_draft, validate_gap_request
     facts = None
     coverage = selection_audit = None
     binding = None
     versions = (request['implementation_version'], request['prompt_version'])
-    scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS)
-    if versions == CONTEXT_VERSIONS:
+    scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS)
+    if versions == GAP_VERSIONS:
+        validate_gap_request(packet, request)
+        resolved, facts, coverage, selection_audit, binding = resolve_gap_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == CONTEXT_VERSIONS:
         validate_context_request(packet, request)
         resolved, facts, coverage, selection_audit, binding = resolve_context_draft(packet, texts[0])
         draft = ModelDraft.model_validate(resolved)
