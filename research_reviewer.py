@@ -48,17 +48,21 @@ def evidence_message(packet, compact=True):
 
 def compact_request(request):
     from research_facts import VERSIONS as FACT_VERSIONS
+    from research_citations import VERSIONS as SELECTION_VERSIONS
     versions = (request.get('implementation_version'), request.get('prompt_version'))
     if versions == LEGACY_VERSIONS:
         return False
-    if versions in ((VERSION, PROMPT_VERSION), FACT_VERSIONS):
+    if versions in ((VERSION, PROMPT_VERSION), FACT_VERSIONS, SELECTION_VERSIONS):
         return True
     raise ReviewBlocked('UNSUPPORTED_REQUEST_VERSION')
 
 
 def request_evidence_message(packet, request):
     from research_facts import VERSIONS as FACT_VERSIONS, fact_evidence_message
+    from research_citations import VERSIONS as SELECTION_VERSIONS, selection_evidence_message
     compact = compact_request(request)
+    if (request['implementation_version'], request['prompt_version']) == SELECTION_VERSIONS:
+        return selection_evidence_message(packet)
     if (request['implementation_version'], request['prompt_version']) == FACT_VERSIONS:
         return fact_evidence_message(packet)
     return evidence_message(packet, compact)
@@ -187,8 +191,12 @@ def parse_response(packet, request, response, reviewed_at):
     if len(texts) != 1 or not isinstance(texts[0], str):
         raise ReviewBlocked('AMBIGUOUS_PROVIDER_TEXT')
     from research_facts import VERSIONS as FACT_VERSIONS, resolve_draft
+    from research_citations import VERSIONS as SELECTION_VERSIONS, resolve_selected_draft
     facts = None
-    if (request['implementation_version'], request['prompt_version']) == FACT_VERSIONS:
+    if (request['implementation_version'], request['prompt_version']) == SELECTION_VERSIONS:
+        resolved, facts = resolve_selected_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif (request['implementation_version'], request['prompt_version']) == FACT_VERSIONS:
         resolved, facts = resolve_draft(packet, texts[0])
         draft = ModelDraft.model_validate(resolved)
     else:

@@ -177,7 +177,7 @@ class ReviewDraft(Strict):
     reviewer_id: str = Field(min_length=1)
     implementation_version: str = Field(min_length=1)
     model_id: str = Field(min_length=1)
-    prompt_version: Literal['source-bound-draft-v1', 'governed-research-v1', 'governed-research-v2', 'governed-research-v3']
+    prompt_version: Literal['source-bound-draft-v1', 'governed-research-v1', 'governed-research-v2', 'governed-research-v3', 'governed-research-v4']
     reviewed_at: str
     claims: list[Claim]
     limitations: list[str]

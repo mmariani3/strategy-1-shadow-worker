@@ -6,14 +6,14 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-### Default CLI: factual research v3
+### Default CLI: factual research v4
 
-The CLI now prepares `1.2.0-automated-research` / `governed-research-v3` requests
-through `research_facts.prepare_fact_request`. The old `research_reviewer.prepare_request`
-function remains the explicit v2 compatibility API; old requests/results retain their
+The CLI now prepares `1.3.0-automated-research` / `governed-research-v4` requests
+through `research_citations.prepare_selection_request`. The old `research_reviewer.prepare_request`
+and `research_facts.prepare_fact_request` functions remain explicit v2 and v3 compatibility APIs; old requests/results retain their
 original parsers and attribution. No historical output is upgraded or relabeled.
 
-Version 3 first asks for five source-backed findings: instrument identity, catalyst
+Versions 3 and 4 first ask for five source-backed findings: instrument identity, catalyst
 event, actual event/announcement timing, publication timing, and document coverage
 (including referenced exhibits absent from the capture). It then assesses catalyst
 freshness, materiality and same-event evidence. Workflow fields remain visible but
@@ -27,9 +27,18 @@ claims otherwise. Their corresponding accepted measurement/review adapters are n
 implemented here. This restricts software capability; it does not change strategy
 rules, live Worker inputs or experimental eligibility.
 
-The model cites stable excerpt IDs. The host derives each handle from the original
-source ID and exact character offsets, reconstructs escaped quotations locally and
-runs the existing exact-source validation. Handles cannot refer to packet IDs or
+Version 4 requires each citation to contain a stable excerpt ID and a verbatim
+`supporting_text` clause copied from that excerpt's decoded readable text. The host
+checks that the clause actually occurs in the selected excerpt and uniquely in the
+original source, then persists its precise encoded quotation and source offsets.
+It rejects empty, ambiguous and mismatched selections without repair. Workflow and
+market-snapshot fields remain in the complete packet but have no selectable handles.
+Publication metadata can support publication facts only. Version 3's gates remain
+in force for v4. These checks detect incorrect attribution, **not** whether a real
+quotation logically supports the conclusion; semantic review is still required.
+
+The host derives each handle from the original source ID and character offsets.
+Handles cannot refer to packet IDs or
 governing-master IDs. Full lossless source text remains in the request; the catalogue
 is an auxiliary index, not a summary or completeness claim. Repeated spans that
 cannot uniquely map remain visible but unindexed. The catalogue increases request
@@ -50,7 +59,9 @@ local ledger. Nothing writes to trading services, the Journal or a broker.
 Regression coverage includes decoded quotation/newline handling, workflow-only
 claims, missing exhibits/facts, publication-versus-event timestamps, price/snapshot
 misuse, unknown/master IDs, capability violations, catalogue tampering, exact input
-size, restart recovery and preservation of v1/v2 histories. These isolated tests are
+size, restart recovery and preservation of v1/v2/v3 histories. Version 4 also covers
+wrong-passage support, mixed workflow/document citations, publication-versus-event
+use, narrow quote offsets, ambiguity, and useful positive assessments. These isolated tests are
 infrastructure fixtures, not trades or strategy observations.
 
 - The complete text of the three governing masters, with matching document IDs, versions, revisions and content digests. This text comes from a separate authorized document read, not discovery sources or model output.
