@@ -188,6 +188,62 @@ result applies to the unchanged runtime; this follow-up is documentation-only.
 No result qualifies a trade, enables unattended operation or establishes strategy
 profitability. The cases are development regressions, not independent validation.
 
+#### Broader v7 unused-case comparison (September 19, 2026)
+
+Twelve subsequent authorized actual-CLI calls compared Mini and GPT-5.5 on six
+previously unused packets/captured bodies, with source-backed author references
+frozen before responses and withheld from models. Models, complete masters,
+12,000 output-token allowance, 250,000-byte request limit and transport v2 remained
+unchanged. No retry, repair, substitution or runtime change occurred.
+
+| Case | Mini contract outcome | GPT-5.5 contract outcome |
+|---|---|---|
+| PANW | Rejected: quotation location (17/24 exact) | Rejected: quotation location (12/13 exact) |
+| FBRT | Rejected: source category (15/15 exact) | Research draft admitted (18/18 exact) |
+| AIEQ | Rejected: quotation location (14/15 exact) | Research draft admitted (19/19 exact) |
+| SDST | Rejected: quotation location (13/15 exact) | Research draft admitted (15/15 exact) |
+| LCID | Incomplete: 12,000 output-token limit | Research draft admitted (17/17 exact) |
+| GEV | Rejected: event fact unresolved (21/21 exact) | Research draft admitted (17/17 exact) |
+
+Five admitted results replay exactly; all remain ineligible for handoff. Eight
+historical ledgers are byte-identical to the frozen plan. There are 53 preserved
+outcomes (27 admitted drafts, 26 non-admitted); these are not accuracy scores.
+The eleven complete drafts contain 178/189 exactly resolved selections. No
+unknown-ID or duplicate-document-name failure appeared in complete drafts.
+The incomplete LCID response was preserved without partial-JSON repair or scoring.
+
+Semantic findings remain material. Mini assessed Netflix instead of target AIEQ,
+invented freshness interpretations, and retained unsupported universal primary
+document requirements. GPT-5.5 correctly separated AIEQ from Netflix but still
+marked Netflix freshness supported inside the AIEQ candidate record; its rationale
+caveat does not establish target-level freshness or ETF universe eligibility.
+Both models omitted the full older/newer SDST notice-deadline distinction. Useful
+GPT-5.5 results preserved limited FBRT analyst scope, SDST financing capacity versus
+proceeds, Lucid plans/targets versus realized results, and GE Vernova forecasts
+versus reported backlog. Date knowledge alone did not clear freshness on those
+four stronger-model cases.
+
+All 30 frozen case-specific expectations per model and four common expectations
+per case were assessed separately as SATISFIED, VIOLATED or NOT_ESTABLISHED, with
+original response evidence. Assessment is by the implementation author; these
+are selected challenge cases from one scan, not independent acceptance or a
+representative session. PANW/FBRT intentionally share an article within the set.
+Exact quote location does not prove entailment, materiality or policy correctness.
+The two-source implementation prerequisite must not become a new universal
+two-independent-news-source strategy rule. Governing source rules still control.
+
+Calculated cost: **$1.7096175** (Mini $0.1418775; GPT-5.5 $1.5677400).
+Returned models: `gpt-5-mini-2025-08-07`, `gpt-5.5-2026-04-23`.
+The pre-run commit was GitHub `3c8c75a548b145167efb4d0581a5439077b06728`,
+matching local `1cb6a793225aad942500b8904d7a163b354c986d` at tree
+`bc25f75f9e7d75939dfdeda3cba8ba479148ad01`. Runtime is unchanged from the
+434-test implementation; this results update is documentation only.
+
+Neither model is accepted for unattended use. Target/event binding, approved
+freshness inputs, quotation reliability and independent semantic acceptance remain
+outstanding. No production configuration, master, Journal, signal, broker, schedule,
+deployment or execution changed. Live runtime configuration was not reverified.
+
 #### Fresh v6 provider regression (September 19, 2026)
 
 Four unchanged-limit CLI calls on the previously tested KALU/TRUG cases completed
