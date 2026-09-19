@@ -49,10 +49,11 @@ def evidence_message(packet, compact=True):
 def compact_request(request):
     from research_facts import VERSIONS as FACT_VERSIONS
     from research_citations import VERSIONS as SELECTION_VERSIONS
+    from research_coverage import VERSIONS as COVERAGE_VERSIONS
     versions = (request.get('implementation_version'), request.get('prompt_version'))
     if versions == LEGACY_VERSIONS:
         return False
-    if versions in ((VERSION, PROMPT_VERSION), FACT_VERSIONS, SELECTION_VERSIONS):
+    if versions in ((VERSION, PROMPT_VERSION), FACT_VERSIONS, SELECTION_VERSIONS, COVERAGE_VERSIONS):
         return True
     raise ReviewBlocked('UNSUPPORTED_REQUEST_VERSION')
 
@@ -60,7 +61,10 @@ def compact_request(request):
 def request_evidence_message(packet, request):
     from research_facts import VERSIONS as FACT_VERSIONS, fact_evidence_message
     from research_citations import VERSIONS as SELECTION_VERSIONS, selection_evidence_message
+    from research_coverage import VERSIONS as COVERAGE_VERSIONS, coverage_evidence_message
     compact = compact_request(request)
+    if (request['implementation_version'], request['prompt_version']) == COVERAGE_VERSIONS:
+        return coverage_evidence_message(packet)
     if (request['implementation_version'], request['prompt_version']) == SELECTION_VERSIONS:
         return selection_evidence_message(packet)
     if (request['implementation_version'], request['prompt_version']) == FACT_VERSIONS:
@@ -192,8 +196,13 @@ def parse_response(packet, request, response, reviewed_at):
         raise ReviewBlocked('AMBIGUOUS_PROVIDER_TEXT')
     from research_facts import VERSIONS as FACT_VERSIONS, resolve_draft
     from research_citations import VERSIONS as SELECTION_VERSIONS, resolve_selected_draft
+    from research_coverage import VERSIONS as COVERAGE_VERSIONS, resolve_coverage_draft
     facts = None
-    if (request['implementation_version'], request['prompt_version']) == SELECTION_VERSIONS:
+    coverage = selection_audit = None
+    if (request['implementation_version'], request['prompt_version']) == COVERAGE_VERSIONS:
+        resolved, facts, coverage, selection_audit = resolve_coverage_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif (request['implementation_version'], request['prompt_version']) == SELECTION_VERSIONS:
         resolved, facts = resolve_selected_draft(packet, texts[0])
         draft = ModelDraft.model_validate(resolved)
     elif (request['implementation_version'], request['prompt_version']) == FACT_VERSIONS:
@@ -227,4 +236,7 @@ def parse_response(packet, request, response, reviewed_at):
     if facts is not None:
         result['fact_findings'] = facts
         result['research_scope'] = 'DOCUMENT_FACTS_AND_CATALYST_ONLY'
+    if coverage is not None:
+        result['materiality_evidence_coverage'] = coverage
+        result['citation_selection_audit'] = selection_audit
     return result

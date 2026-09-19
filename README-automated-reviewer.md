@@ -6,14 +6,15 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-### Default CLI: factual research v4
+### Default CLI: factual research v5
 
-The CLI now prepares `1.3.0-automated-research` / `governed-research-v4` requests
-through `research_citations.prepare_selection_request`. The old `research_reviewer.prepare_request`
-and `research_facts.prepare_fact_request` functions remain explicit v2 and v3 compatibility APIs; old requests/results retain their
+The CLI now prepares `1.4.0-automated-research` / `governed-research-v5` requests
+through `research_coverage.prepare_coverage_request`. The old `research_reviewer.prepare_request`,
+`research_facts.prepare_fact_request`, and `research_citations.prepare_selection_request`
+functions remain explicit v2, v3, and v4 compatibility APIs; old requests/results retain their
 original parsers and attribution. No historical output is upgraded or relabeled.
 
-Versions 3 and 4 first ask for five source-backed findings: instrument identity, catalyst
+Versions 3 through 5 first ask for five source-backed findings: instrument identity, catalyst
 event, actual event/announcement timing, publication timing, and document coverage
 (including referenced exhibits absent from the capture). It then assesses catalyst
 freshness, materiality and same-event evidence. Workflow fields remain visible but
@@ -27,14 +28,20 @@ claims otherwise. Their corresponding accepted measurement/review adapters are n
 implemented here. This restricts software capability; it does not change strategy
 rules, live Worker inputs or experimental eligibility.
 
-Version 4 requires each citation to contain a stable excerpt ID and a verbatim
-`supporting_text` clause copied from that excerpt's decoded readable text. The host
-checks that the clause actually occurs in the selected excerpt and uniquely in the
-original source, then persists its precise encoded quotation and source offsets.
-It rejects empty, ambiguous and mismatched selections without repair. Workflow and
+Version 5 requires each citation to contain a stable excerpt ID and a verbatim
+`supporting_text` clause. The ID anchors the quote: it must overlap that excerpt,
+but may extend through neighboring excerpts in the **same original source field**.
+The exact readable words must occur uniquely in the original serialized source.
+It cannot cross JSON fields, documents, or disjoint passages. This handles sentences
+split by the catalogue without changing the catalogue, source text or old offsets.
+Different source spans can share one anchor ID; an identical source span repeated
+within one finding/claim/coverage assessment is rejected, including via a second ID.
+The result records precise quote offsets and each anchor in `citation_selection_audit`.
+No normalization, fuzzy matching, automatic quote repair or silent deduplication occurs.
+Workflow and
 market-snapshot fields remain in the complete packet but have no selectable handles.
 Publication metadata can support publication facts only. Version 3's gates remain
-in force for v4. These checks detect incorrect attribution, **not** whether a real
+in force for v5, with duplicate detection now applied to exact spans. These checks detect incorrect attribution, **not** whether a real
 quotation logically supports the conclusion; semantic review is still required.
 
 The host derives each handle from the original source ID and character offsets.
@@ -51,6 +58,25 @@ substantive source IDs. Two IDs do **not** prove source independence. Source cat
 classification, fact status consistency and exact quotations do **not** prove semantic
 truth. Every accepted result remains a research draft requiring independent review.
 
+#### Materiality coverage is separate from a fact about missing documents
+
+An EVIDENCED `document_coverage` finding may correctly say an exhibit is missing.
+Version 5 requires a separate `materiality_coverage` object with `status`,
+`missing_documents`, `rationale`, and source-cited `evidence`. Status is one of
+`SUFFICIENT_FOR_RESEARCH`, `INCOMPLETE`, or `UNRESOLVED`. The first requires no
+declared missing required documents and at least one substantive citation; INCOMPLETE
+requires named missing documents. Publication/workflow metadata cannot establish
+coverage. Missing or inconsistent declarations fail closed.
+
+Either a positive or negative materiality conclusion requires sufficient coverage
+plus the existing fact prerequisites. Incomplete or unresolved coverage still permits
+useful facts and unresolved criteria to be recorded. The declaration is persisted in
+`materiality_evidence_coverage` with semantic verification NOT_ESTABLISHED: these
+checks cannot detect a document the model omitted from its missing-document list,
+prove economic significance, or independently verify that its declared coverage
+is sufficient. This is a research evidence gate, not a strategy approval or changed
+threshold. Coverage from v3/v4 is never implicitly promoted to the new status.
+
 The five model findings are persisted as `fact_findings` alongside the attributed
 review artifact; the original provider response stays in the immutable ledger.
 No database migration is needed: these are additive JSON payloads in the existing
@@ -59,10 +85,14 @@ local ledger. Nothing writes to trading services, the Journal or a broker.
 Regression coverage includes decoded quotation/newline handling, workflow-only
 claims, missing exhibits/facts, publication-versus-event timestamps, price/snapshot
 misuse, unknown/master IDs, capability violations, catalogue tampering, exact input
-size, restart recovery and preservation of v1/v2/v3 histories. Version 4 also covers
+size, restart recovery and preservation of v1/v2/v3/v4 histories. Version 4 also covers
 wrong-passage support, mixed workflow/document citations, publication-versus-event
 use, narrow quote offsets, ambiguity, and useful positive assessments. These isolated tests are
-infrastructure fixtures, not trades or strategy observations.
+infrastructure fixtures, not trades or strategy observations. Version 5 adds exact
+cross-boundary source spans, distinct quotes sharing anchors, repeated source-span
+rejection, separate completeness status, missing-document conflicts and useful
+research-only outputs with incomplete evidence. It has been checked offline against
+saved v4 responses; no fresh provider response to the v5 schema has yet been tested.
 
 - The complete text of the three governing masters, with matching document IDs, versions, revisions and content digests. This text comes from a separate authorized document read, not discovery sources or model output.
 - Every source in one immutable evidence packet, clearly separated as untrusted data. Source instructions cannot add tools or broker permissions.
