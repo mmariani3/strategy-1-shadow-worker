@@ -6,9 +6,64 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-### Default CLI: evidence gaps and follow-ups v9
+### Default CLI: typed event subjects v10
 
-The default CLI prepares `1.8.0-automated-research` / `governed-research-v9`
+The default CLI now prepares `1.9.0-automated-research` /
+`governed-research-v10` through `research_subjects.prepare_subject_request`.
+This is an offline-tested infrastructure proposal; **no v10 provider calls or
+independent semantic acceptance have occurred**.
+
+The v9 FXY responses named the Bank of Japan in prose but left the required
+read-through ticker field null. v10 records an event subject with a kind, name,
+optional symbol and substantive citations. ISSUER requires a name and symbol;
+ORGANIZATION and ECONOMIC_EVENT require a name and forbid a symbol; UNKNOWN
+cannot establish an event link or evidenced event facts. Direct events still
+require the target issuer; read-through events retain a separately cited subject
+and economic link. Facts explicitly identify TARGET, EVENT or PUBLICATION roles.
+
+This does not authorize ETFs, currency trusts or another strategy. The target's
+stock-universe gate, limited materiality/verification scope, insufficient
+freshness/eight operational criteria and no-execution boundary remain. A known
+organization can be recorded in research without becoming an eligible instrument.
+Names, kinds and economic links remain model assertions requiring semantic review.
+
+Subject IDs bind to the packet and typed declaration. Event IDs bind to the full
+typed event; all fact, claim, coverage and gap/follow-up references retain those
+IDs. A host-only compatibility key permits unchanged v9 validation internally;
+it is removed from all persisted subject fields and is never a security ticker.
+Historical v1–v9 parsers and records are not migrated or relabeled.
+
+The source-backed author review also found:
+
+- LRCX's reported investment is a plan. Financial significance can remain an
+  unresolved question, but binding/funded/formally approved status is not a
+  universal strategy prerequisite. Event timing remains a separate unresolved
+  freshness issue rather than automatically a narrow materiality requirement.
+- GIPR's captured filing already describes the bounded suspension/delisting stay
+  and a contingent intention to seek a further extension. Assess that context
+  before calling it missing. Additional economic significance may remain unknown.
+
+v10 prompts state these distinctions explicitly. No prose filter can prove them:
+tests deliberately demonstrate that a plausible but unnecessary gap or wrong
+entity name can still be structurally admissible and remains semantically
+unverified. The private review addendum does not alter old model responses,
+reference expectations, tier decisions, observation eligibility or masters, and
+is **author review, not independent acceptance**.
+
+Validation: **577 tests passed, including 39 v10 regressions**. Tests cover named
+non-ticker subjects, absent/metadata/duplicate subject evidence, issuer/unknown
+conflicts, wrong fact roles, stock-universe and operational boundaries, stable
+typed IDs and gap links, optional follow-ups, lossless inputs/schema limits,
+prebilling tampering, default CLI without credentials and durable historical
+replay. Read-only replay preserves all 77 provider outcomes (38 admitted research
+results and 39 rejections); eleven ledger hashes are unchanged. Twelve reused
+development requests prepare losslessly at 87,638–93,883 bytes and remain unsent.
+No database migration, API spending, production/Journal write, merge or deployment.
+Provider compatibility and independent semantic acceptance remain outstanding.
+
+### Historical evidence gaps and follow-ups v9
+
+The explicit v9 preparer uses `1.8.0-automated-research` / `governed-research-v9`
 through `research_gaps.prepare_gap_request`. Offline regressions and a bounded
 12-call provider comparison are complete. **Independent semantic acceptance has
 not occurred.**

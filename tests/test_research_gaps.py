@@ -205,9 +205,9 @@ def test_versioned_attribution_trace_and_durable_replay(gap_case,masters):
     assert old==parse_response(p,old_req,reply(context_draft(p)),NOW)
 
 
-def test_default_cli_no_credentials_or_provider(gap_case,masters,monkeypatch,capsys):
+def test_historical_v9_cli_no_credentials_or_provider(gap_case,masters,monkeypatch,capsys):
     import run_research_reviewer as cli
-    assert cli.prepare_request is prepare_gap_request
+    monkeypatch.setattr(cli,'prepare_request',prepare_gap_request)
     p,_=gap_case;root=ledger_path().parent;pf=root/'p.json';mf=root/'m.json'
     pf.write_text(canonical(p),encoding='utf-8');mf.write_text(canonical(masters),encoding='utf-8')
     def forbidden(*args,**kwargs):raise AssertionError('No credential/provider access')
