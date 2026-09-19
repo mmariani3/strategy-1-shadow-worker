@@ -6,15 +6,16 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-### Default CLI: factual research v6
+### Default CLI: factual research v7
 
-The CLI now prepares `1.5.0-automated-research` / `governed-research-v6` requests
-through `research_scoped.prepare_scoped_request`. The old `research_reviewer.prepare_request`,
+The CLI now prepares `1.6.0-automated-research` / `governed-research-v7` requests
+through `research_bounded.prepare_bounded_request`. The old `research_reviewer.prepare_request`,
 `research_facts.prepare_fact_request`, `research_citations.prepare_selection_request`, and
-`research_coverage.prepare_coverage_request` remain explicit v2–v5 compatibility APIs; old requests/results retain their
+`research_coverage.prepare_coverage_request` and `research_scoped.prepare_scoped_request`
+remain explicit v2–v6 compatibility APIs; old requests/results retain their
 original parsers and attribution. No historical output is upgraded or relabeled.
 
-Versions 3 through 6 first ask for five source-backed findings: instrument identity, catalyst
+Versions 3 through 7 first ask for five source-backed findings: instrument identity, catalyst
 event, actual event/announcement timing, publication timing, and document coverage
 (including referenced exhibits absent from the capture). It then assesses catalyst
 freshness, materiality and same-event evidence. Workflow fields remain visible but
@@ -28,10 +29,10 @@ claims otherwise. Their corresponding accepted measurement/review adapters are n
 implemented here. This restricts software capability; it does not change strategy
 rules, live Worker inputs or experimental eligibility.
 
-Versions 5 and 6 require each citation to contain a stable excerpt ID and a verbatim
+Versions 5 through 7 require each citation to contain a stable excerpt ID and a verbatim
 `supporting_text` clause. The ID anchors the quote: it must overlap that excerpt,
 but may extend through neighboring excerpts in the **same original source field**.
-Version 5 requires whole-source uniqueness. Version 6 permits repeated text only
+Version 5 requires whole-source uniqueness. Versions 6 and 7 permit repeated text only
 when exactly one occurrence within the original field overlaps the selected anchor.
 Two occurrences overlapping the same anchor still fail, including overlapping
 substrings. A longer exact clause may disambiguate them; no location is guessed.
@@ -46,7 +47,7 @@ No normalization, fuzzy matching, automatic quote repair or silent deduplication
 Workflow and
 market-snapshot fields remain in the complete packet but have no selectable handles.
 Publication metadata can support publication facts only. Version 3's gates remain
-in force for v5/v6, with duplicate detection applied to exact spans. These checks detect incorrect attribution, **not** whether a real
+in force for v5/v6/v7, with duplicate detection applied to exact spans. These checks detect incorrect attribution, **not** whether a real
 quotation logically supports the conclusion; semantic review is still required.
 
 The host derives each handle from the original source ID and character offsets.
@@ -111,6 +112,44 @@ Mini pass those structural probes; the other two fail as above. They are not new
 v6 provider responses, corrected historical outcomes or semantic acceptance.
 This offline pass makes zero API calls. Original v5 results remain authoritative
 for those original requests, including their failures.
+
+#### v7 format corrections and offline verification (September 19, 2026)
+
+The two v6 Mini failures below motivate format-only changes:
+
+- The strict response schema enumerates every selectable excerpt ID from this
+  packet. The full packet and catalogue remain identical to v6. Unknown IDs still
+  fail local validation, and selecting a known ID does not bypass exact quotation,
+  source-field, ambiguity, category or fact checks. The schema is checked against
+  the packet before ledger reservation and again during response parsing.
+- The provider returns one `missing_documents: [{document, reason}]` list and no
+  separate `missing_document_reasons` field. Both compatibility fields in the saved
+  coverage record are derived from that single list. The original response is
+  retained unchanged. No fuzzy name matching, repair or historical conversion is
+  performed. Blank/duplicate documents, blank reasons, missing scope and conflicting
+  coverage still fail. Scope, necessary evidence and all substantive v6 requirements
+  remain unchanged; a nonempty reason is still not independent semantic verification.
+
+The schema rejects an empty catalogue or the documented enum limits (1,000 total
+enum values; over 250 values in a string enum with more than 15,000 characters).
+It never trims IDs or packet content to fit. The existing complete-request byte
+limit also applies. This can block large packets before dispatch; it is not a
+strategy threshold. Limits were checked against [Structured Outputs documentation](https://developers.openai.com/api/docs/guides/structured-outputs)
+on September 19, 2026.
+
+**434 tests passed**, including 31 v7 regressions covering packet-specific schemas,
+limit boundaries, rehashed schema tampering before billing, exact source locations,
+document/reason consistency, substantive gates, durable replay, and CLI preparation
+without credentials or provider calls. All 37 saved provider outcomes retained
+their original parsers and results: 19 exact successful replays and 18 rejections.
+All seven original ledger files had identical before/after hashes.
+
+This v7 pass made zero paid calls. Live compatibility of the new enum schema and
+fresh model performance remain unverified. The next four-request comparison uses
+the same KALU/TRUG development cases, models, 12,000-token output allowance and
+250,000-byte input limit; it is prepared separately without dispatch. No passing
+offline check establishes semantic acceptance, profitability or trading eligibility.
+No database migration is needed for these versioned local JSON records.
 
 #### Fresh v6 provider regression (September 19, 2026)
 

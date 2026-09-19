@@ -87,6 +87,9 @@ def execute_once(ledger, packet, request, provider, clock=utc_now):
         raise ReviewBlocked('REQUEST_PACKET_MISMATCH')
     if request['body']['input'][-1] != request_evidence_message(packet, request):
         raise ReviewBlocked('REQUEST_EVIDENCE_MISMATCH')
+    from research_bounded import VERSIONS as BOUNDED_VERSIONS, validate_bounded_request
+    if (request['implementation_version'], request['prompt_version']) == BOUNDED_VERSIONS:
+        validate_bounded_request(packet, request)
     claimed = ledger.claim(request, clock())
     history = ledger.events(request['request_id'])
     if 'COMPLETED' in history:

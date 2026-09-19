@@ -203,8 +203,7 @@ def test_existing_capability_fact_and_source_gates_survive(scoped_case,bad):
 
 def test_schema_lossless_packet_limits_and_version_routing(scoped_case,masters):
     p,req=scoped_case
-    from run_research_reviewer import prepare_request
-    assert prepare_request is prepare_scoped_request
+    prepare_request = prepare_scoped_request  # Frozen v6 compatibility contract.
     view=json.loads(req['body']['input'][-1]['content'].split('\n',1)[1])
     for s in view['packet']['sources']:s['raw']=json.loads(s['text'])
     assert view['packet']==p and view['citation_policy']=='UNIQUE_ANCHORED_SAME_FIELD_OCCURRENCE_V2'
@@ -233,6 +232,7 @@ def test_replay_and_evidence_tamper_before_dispatch(scoped_case):
 @pytest.mark.parametrize('mock_review_route',[False,True])
 def test_cli_prepares_v6_without_loading_a_key_or_calling_provider(scoped_case,masters,monkeypatch,capsys,mock_review_route):
     import run_research_reviewer as cli
+    monkeypatch.setattr(cli,'prepare_request',prepare_scoped_request)
     p,_=scoped_case;root=ledger_path().parent
     packet_file=root/'packet.json';master_file=root/'masters.json'
     packet_file.write_text(canonical(p),encoding='utf-8')
