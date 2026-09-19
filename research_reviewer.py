@@ -155,18 +155,29 @@ def prepare_request(packet, masters, model, max_output_tokens, max_input_bytes, 
 
 
 class OpenAIReviewer:
-    def __init__(self, api_key):
+    TRANSPORT_VERSION = 'openai-responses-http-v2'
+
+    def __init__(self, api_key, read_timeout_seconds=180):
         if not isinstance(api_key, str) or not api_key.strip():
             raise ReviewBlocked('API_CREDENTIAL_MISSING')
+        if type(read_timeout_seconds) is not int or read_timeout_seconds <= 0:
+            raise ReviewBlocked('POSITIVE_READ_TIMEOUT_REQUIRED')
         self._key = api_key
+        self._read_timeout_seconds = read_timeout_seconds
+
+    def transport_metadata(self):
+        return dict(transport_version=self.TRANSPORT_VERSION, connect_timeout_seconds=10,
+            read_timeout_seconds=self._read_timeout_seconds, automatic_retries=False,
+            allow_redirects=False, trust_environment=False)
 
     def respond(self, body):
         # Fixed endpoint; no source URLs, redirects, model tools, automatic retries or streaming.
         try:
             with requests.Session() as session:
+                session.trust_env = False
                 response = session.post(ENDPOINT,
                     headers={'Authorization': 'Bearer ' + self._key, 'Content-Type': 'application/json'},
-                    data=canonical(body).encode('utf-8'), timeout=(10, 60), allow_redirects=False)
+                    data=canonical(body).encode('utf-8'), timeout=(10, self._read_timeout_seconds), allow_redirects=False)
                 if response.status_code != 200:
                     raise ReviewBlocked('PROVIDER_HTTP_FAILURE')
                 return response.json()

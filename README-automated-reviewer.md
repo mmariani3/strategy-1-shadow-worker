@@ -98,7 +98,14 @@ quotations. All four declared incomplete materiality coverage and kept materiali
 unresolved. This development-informed sample is not independent accuracy evidence
 and does not test a real provider's sufficient-coverage conclusion. Two Mini calls
 took more than 60 seconds end-to-end using the acceptance transport's 180-second
-read timeout; the CLI's 60-second read timeout still needs operational verification.
+read timeout. The CLI now defaults to the same 180-second read timeout, configurable
+with `--read-timeout-seconds`. This is a socket read timeout, not a total request
+deadline or guarantee of success. The client uses a fixed endpoint, ignores ambient
+proxy/netrc settings, disallows redirects, and makes no automatic retries. A timeout
+keeps the reserved attempt blocked even if a later invocation requests more time.
+New calls persist `TRANSPORT_CONFIGURED` with `openai-responses-http-v2` and the
+actual timeout settings before dispatch, without credentials. Historical requests
+and responses are not relabeled; the v5 research prompt/parser are unchanged.
 
 - The complete text of the three governing masters, with matching document IDs, versions, revisions and content digests. This text comes from a separate authorized document read, not discovery sources or model output.
 - Every source in one immutable evidence packet, clearly separated as untrusted data. Source instructions cannot add tools or broker permissions.

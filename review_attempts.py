@@ -100,6 +100,9 @@ def execute_once(ledger, packet, request, provider, clock=utc_now):
         raise ReviewBlocked('AMBIGUOUS_ATTEMPT_NO_RETRY')
     if claimed:
         try:
+            metadata = getattr(provider, 'transport_metadata', None)
+            if callable(metadata):
+                ledger.record(request['request_id'], 'TRANSPORT_CONFIGURED', metadata(), clock())
             response = provider.respond(request['body'])
             ledger.record(request['request_id'], 'RECEIVED', response, clock())
         except Exception:

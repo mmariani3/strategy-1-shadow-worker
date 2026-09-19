@@ -23,6 +23,8 @@ def main():
     parser.add_argument('--dispatch', action='store_true', help='Explicitly permit a billable model request')
     parser.add_argument('--ledger', type=Path)
     parser.add_argument('--max-calls', type=int)
+    parser.add_argument('--read-timeout-seconds', type=int, default=180,
+                        help='Socket read timeout, not a total deadline; unknown outcomes are never retried')
     args = parser.parse_args()
     packet = json.loads(args.packet.read_text(encoding='utf-8'))
     # Do the free checks before loading credentials, reserving a call or preparing a paid request.
@@ -41,12 +43,13 @@ def main():
     if args.dispatch:
         if not args.ledger or not args.max_calls:
             parser.error('--dispatch requires --ledger and --max-calls')
-        provider = OpenAIReviewer(os.environ.get('OPENAI_API_KEY'))
+        provider = OpenAIReviewer(os.environ.get('OPENAI_API_KEY'), args.read_timeout_seconds)
         ledger = AttemptLedger(args.ledger, args.max_calls)
         try:
             reviewed = execute_once(ledger, packet, request, provider)
         finally:
             ledger.close()
+            provider._key = None
         result_path = write_once(args.output, 'model-review-'+digest(reviewed)+'.json', canonical(reviewed)+'\n')
         result = {'status': 'RESEARCH_DRAFT_AVAILABLE', 'request_id': request['request_id'],
                   'result_file': str(result_path), 'eligible_for_handoff': False}
