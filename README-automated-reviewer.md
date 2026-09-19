@@ -144,12 +144,49 @@ without credentials or provider calls. All 37 saved provider outcomes retained
 their original parsers and results: 19 exact successful replays and 18 rejections.
 All seven original ledger files had identical before/after hashes.
 
-This v7 pass made zero paid calls. Live compatibility of the new enum schema and
-fresh model performance remain unverified. The next four-request comparison uses
+The offline v7 implementation pass made zero paid calls. At that point live
+compatibility of the new enum schema and fresh model performance were unverified.
+The four-request comparison below uses
 the same KALU/TRUG development cases, models, 12,000-token output allowance and
-250,000-byte input limit; it is prepared separately without dispatch. No passing
+250,000-byte input limit; it was prepared separately before dispatch. No passing
 offline check establishes semantic acceptance, profitability or trading eligibility.
 No database migration is needed for these versioned local JSON records.
+
+#### Fresh v7 provider regression (September 19, 2026)
+
+Four actual-CLI calls completed at runtime commit
+`f75ea5357f16d80d6ad69b7c9644968679b84c1d`, with unchanged models, development
+cases, limits and transport settings. No retry or response repair occurred.
+
+| Case | Model | Contract result | Exact selections |
+|---|---|---|---:|
+| KALU | GPT-5 Mini | Rejected: publication metadata used as event evidence | 12/12 |
+| KALU | GPT-5.5 | Research draft admitted | 11/11 |
+| TRUG | GPT-5 Mini | Research draft admitted | 17/17 |
+| TRUG | GPT-5.5 | Research draft admitted | 19/19 |
+
+The provider accepted the new enum schema in all four requests. All 59 selected
+quotations resolve exactly, and neither invalid-ID nor duplicate-document-name
+failures recurred in this small sample. The three admitted outputs replay exactly.
+All 37 earlier outcomes remain unchanged; eight ledgers now contain 41 outcomes
+(22 admitted, 19 rejected). These are contract outcomes, not semantic accuracy.
+
+Mini KALU still mistook publication metadata for event time; the existing source
+category gate rejected it. It also claimed same-event support using a summary
+that lists other stocks and does not mention KALU. Mini TRUG still invented a
+universal primary/SEC/partner-document requirement despite passing the contract.
+GPT-5.5 preserved conditional financing, limited KALU Tier B scope and unresolved
+verification, without the previous unsupported common-share detail. Its TRUG
+freshness support is only at the reported-Friday date level, not current approval
+or original-scan availability. Its missing-document reasoning also invokes
+contingency resolution; the strategy does not universally require an announced
+transaction to have closed. Necessity and scope therefore still need semantic review.
+
+Calculated cost: **$0.529519**. Both models used their original limits, and all
+four calls recorded 10/180-second transport v2 settings. The existing 434-test
+result applies to the unchanged runtime; this follow-up is documentation-only.
+No result qualifies a trade, enables unattended operation or establishes strategy
+profitability. The cases are development regressions, not independent validation.
 
 #### Fresh v6 provider regression (September 19, 2026)
 
