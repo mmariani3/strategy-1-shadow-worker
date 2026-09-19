@@ -6,6 +6,477 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
+### Default CLI: evidence gaps and follow-ups v9
+
+The default CLI prepares `1.8.0-automated-research` / `governed-research-v9`
+through `research_gaps.prepare_gap_request`. This is an **offline-tested new
+contract with no v9 paid calls or independent semantic acceptance yet**.
+
+The v8 comparison below exposed two admitted semantic problems: treating absent
+independent corroboration as an observed failure, and requiring an absent legal
+opinion without establishing a necessary economic fact. v9 changes the research
+contract rather than relabeling those historical results:
+
+- `same_event_verification=OBSERVED_FAILURE` is unavailable in this component:
+  it has no approved contradiction adjudicator. Missing corroboration, shared
+  origin, different events and proposed conflicts remain insufficient, with an
+  explicit `verification_basis` retained for later review. Proposed positive
+  corroboration keeps the existing two-substantive-source gate and still does
+  not prove independence. This is a software capability limit, not a change to
+  the masters' source requirements or strategy rejection rules.
+- Coverage identifies **missing facts** with their relevance and the limitation
+  of captured evidence. Genuine gaps still block non-insufficient materiality.
+  Declaring coverage sufficient with a gap, or incomplete solely because a
+  document is absent, is rejected.
+- Documents are separately recorded as proposed follow-ups with a question,
+  reason and optional link to a factual gap. The host marks every one
+  `PROPOSAL_ONLY_NOT_AN_APPROVED_REQUIREMENT`. A document suggestion cannot alone
+  block an otherwise supported narrow research assessment. No automatic
+  retrieval, approved document mandate, or strategy prerequisite is created.
+- Gaps and follow-ups retain exact citations, target/event context and stable
+  content-bound gap IDs. Compatibility fields from historical validators do
+  not leak into v9 persisted records as `missing_documents` requirements.
+- Target/event binding citation choices are restricted to substantive source
+  excerpts in the provider schema as well as locally. Publication metadata is
+  still available for publication facts. Both full source packets and governing
+  masters remain lossless; schema/input limits fail without truncation.
+
+The target/ETF, fixed excerpt, freshness, non-catalyst, scope, trace, no-retry and
+research-only boundaries from v8 remain. Historical v1–v8 parsers/results retain
+their original attribution and outcomes. The CLI compatibility test for v8 now
+selects its old preparer explicitly.
+
+Validation: **538 tests passed, including 49 v9 regressions**. Tests reproduce an
+old structurally admissible two-source failure and show v9 rejects it while v8
+replay stays identical; optional follow-ups do not block narrow materiality, real
+gaps do; required-document injection, gap linkage/authority tampering, invalid
+source categories and prebilling schema tampering fail closed. Read-only replay
+preserves 65 actual-provider outcomes (33 admitted, 32 non-admitted), with ten
+unchanged ledger hashes. Twelve full v9 development requests prepare without
+dispatch. New unused-source cases and author references are prepared locally;
+these are infrastructure research, not Strategy #1 observations.
+
+**Remaining limitation:** these gates cannot prove a model's prose, proposed gap,
+economic significance, or positive corroboration judgment. A model can still
+describe an unnecessary gap in plausible language. Those declarations remain
+unverified; a document's necessary status is never approved by this adapter.
+Fresh provider behavior and independent semantic review remain outstanding.
+Neither model is accepted for unattended qualification. No database migration,
+production configuration change, Journal write, merge or deployment is included.
+
+### Historical target and event research v8
+
+The explicit v8 preparer uses `1.7.0-automated-research` / `governed-research-v8` through
+`research_context.prepare_context_request`. Offline regressions and a bounded
+12-call provider test are complete. **Independent semantic acceptance has not occurred.**
+
+The response identifies the packet's target symbol/instrument, its stock-universe
+evidence, and one selected event with its actual subject. Direct events must name
+the target; read-through events identify the other subject and separately cite the
+economic link to the target. Every claim and materiality assessment names the
+target. Instrument/event facts are checked against the corresponding subject.
+Non-insufficient conclusions require evidenced stock-universe and event-link
+declarations with substantive citations. ETF/warrant/right/unknown declarations
+cannot establish the stock universe. They can still produce unresolved research
+facts; this does not authorize an ETF strategy or reject a trade automatically.
+
+The host derives a content-bound selected-event ID and preserves it with claim,
+fact and coverage scope plus the packet's existing trace IDs. This is identity
+within the research artifact, not a verified global event identifier. Scope/link
+labels remain model assertions: a model can still attach incorrect prose to a
+correct symbol, or claim that irrelevant text proves a link. These structural
+checks **do not establish semantic truth, economic significance or eligibility**.
+
+`catalyst_freshness` must remain `INSUFFICIENT_EVIDENCE` in v8. The component has
+no approved freshness-policy evaluator or accepted current-review input. It keeps
+observed event dates separately from publication dates but cannot pass or fail
+freshness from those dates. A future policy adapter needs its own governed review;
+there is no new age cutoff, same-day-only rule or change to Strategy Rules. The
+eight existing non-catalyst capability restrictions remain unchanged.
+
+For citations the model selects only `[{excerpt_id}]`. The host attaches the
+**entire exact selected excerpt**, with original source ID and offsets. It does
+not generate, repair or search for a rewritten quotation. Multiple adjacent
+excerpts can be selected separately; no cross-field stitching occurs. Unknown,
+padded or duplicate IDs and model-supplied quotes/offsets are rejected. Whole
+excerpts can contain irrelevant context, so valid citation location does not prove
+entailment. Complete original packet text remains lossless and visible, including
+repeated text that the unchanged catalogue cannot index uniquely.
+
+The packet-specific schema binds citation choices and target symbols. Schema,
+evidence and packet binding are checked before reservation/provider dispatch and
+again on response parsing. Full inputs, existing byte/output limits and no-retry
+behavior remain. The new single prompt contract separates event occurrence from
+materiality and required documents from optional corroboration. Removing generated
+quote repetitions may improve output completeness. All twelve fresh provider
+responses completed in the development retest below; this does not establish
+reliability on independent cases or prove the output-limit failure cannot recur.
+
+Historical v1–v7 requests use their original parsers and preserve original outcomes.
+No failed historical response is converted into v8 or relabeled as accepted. The
+single document/reason list and all legacy substantive-category, coverage and
+same-event source gates remain. A two-source implementation restriction does not
+change the masters' most-direct-credible-source rule into a universal news-source
+count requirement.
+
+Offline validation: **489 tests passed**, including 55 v8 regressions. Read-only
+replay preserved all 53 saved outcomes: 27 exact admitted results, 26 rejections,
+nine unchanged ledger hashes. Twelve full requests for the six development cases
+prepare without truncation at 83,678–98,442 bytes, with unchanged model choices and
+12,000 output-token allowance. Those twelve requests were subsequently sent in the
+frozen provider comparison below. These are infrastructure checks,
+not Strategy #1 evidence or independent assessment. No schema migration is needed;
+the new binding data lives in versioned local JSON. No merge/deployment or live
+configuration verification is included.
+
+The strict JSON schema uses the documented required fields, closed objects,
+definitions and bounded enums in [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs),
+checked September 19, 2026. Actual schema compatibility was exercised by the
+bounded provider test below.
+
+### v8 provider comparison: development regressions, September 19, 2026
+
+The actual CLI sent the twelve frozen requests for PANW, FBRT, AIEQ, SDST, LCID
+and GEV, each to `gpt-5-mini` and `gpt-5.5`. Full packets and living masters,
+12,000 output tokens and 250,000 input bytes were retained. Runtime, prompts and
+inputs stayed frozen; no retries, repairs or substitutions occurred. Living
+Strategy v0.3, Experiment v0.5 and Automation v0.4 revisions were reread and matched.
+
+| Model | Completed provider responses | Admitted research drafts | Calculated cost |
+| --- | ---: | ---: | ---: |
+| Mini | 6/6 | 0/6 | $0.10629025 |
+| GPT-5.5 | 6/6 | 6/6 | $1.309635 |
+| Total | 12/12 | 6/12 | $1.41592525 |
+
+All **283/283 fixed excerpt selections** resolved exactly to original source
+locations. This is location integrity, not semantic accuracy; whole-excerpt
+selection counts are not directly comparable with historical generated clauses.
+All twelve kept freshness and the eight non-catalyst criteria insufficient.
+Both models preserved AIEQ as an ETF with unresolved stock-universe eligibility.
+Mini's earlier LCID output-limit failure did not recur in this sample.
+
+Mini PANW/FBRT/AIEQ/LCID failed substantive-source binding because publication
+metadata was selected for target/event evidence. SDST/GEV failed contradictory
+coverage declarations: sufficient research plus necessary missing documents.
+Other Mini reasoning issues remain, including event/publication confusion,
+unsupported document requirements and unjustified catalyst-tier conclusions.
+
+Technical admission does not establish semantic correctness. GPT-5.5 still:
+
+- Requires the SDST legal opinion without identifying the necessary economic
+  fact it would resolve; absence alone does not justify that requirement.
+- Marks GEV same-event verification `OBSERVED_FAILURE` because independent
+  corroboration is missing. Missing corroboration should remain insufficient,
+  rather than being promoted to an observed contradictory outcome.
+- Omits some secondary-event dates, deadlines and numerical distinctions from
+  the unchanged author rubric. v8 selects one event; an unassessed secondary
+  event is recorded as NOT_ESTABLISHED, not automatically incorrect.
+
+The original 30 per-case expectations and four common expectations were retained
+and annotated against immutable responses. They are author assessments on reused,
+correlated development cases (PANW/FBRT share an article), **not independent
+acceptance, representative accuracy or Strategy #1 evidence**. Neither model is
+accepted for unattended operation. Do not relax evidence gates to improve counts.
+
+All six admitted results replay exactly; all nine prior ledger hashes are
+unchanged. Across all campaigns there are now 65 preserved outcomes: 33 admitted
+research drafts and 32 non-admitted responses. Calculated cumulative testing cost
+is $7.7711474. Runtime is unchanged from the previously verified 489-test tree
+`da252669d47b9cac1ff4a0bce76f60afd22193ae` (local `a2b9794258a04d9926f291dd826392ae682f7503`,
+GitHub `d41f1bc57a54eaa8e00dfe6b81febd428d445591`); this results update changes only
+documentation. Private packets, responses, ledgers and author annotations remain
+local. No merge, deployment, Journal write or execution occurred. Live production
+configuration was not reverified.
+
+### Historical factual research v3–v7
+
+The explicit `research_bounded.prepare_bounded_request` prepares historical
+`1.6.0-automated-research` / `governed-research-v7` requests. The old `research_reviewer.prepare_request`,
+`research_facts.prepare_fact_request`, `research_citations.prepare_selection_request`, and
+`research_coverage.prepare_coverage_request` and `research_scoped.prepare_scoped_request`
+remain explicit v2–v6 compatibility APIs; all old requests/results retain their
+original parsers and attribution. No historical output is upgraded or relabeled.
+
+Versions 3 through 7 first ask for five source-backed findings: instrument identity, catalyst
+event, actual event/announcement timing, publication timing, and document coverage
+(including referenced exhibits absent from the capture). It then assesses catalyst
+freshness, materiality and same-event evidence. Workflow fields remain visible but
+cannot substantiate positive/negative catalyst findings. Missing review fields are
+insufficient evidence, not an observed failure.
+
+This **document-only research adapter** cannot establish market context, liquidity,
+participation, setup, risk, prospective confirmation, current approvals or macro
+clearance. Code requires these assessments to remain unresolved, even if the model
+claims otherwise. Their corresponding accepted measurement/review adapters are not
+implemented here. This restricts software capability; it does not change strategy
+rules, live Worker inputs or experimental eligibility.
+
+Versions 5 through 7 require each citation to contain a stable excerpt ID and a verbatim
+`supporting_text` clause. The ID anchors the quote: it must overlap that excerpt,
+but may extend through neighboring excerpts in the **same original source field**.
+Version 5 requires whole-source uniqueness. Versions 6 and 7 permit repeated text only
+when exactly one occurrence within the original field overlaps the selected anchor.
+Two occurrences overlapping the same anchor still fail, including overlapping
+substrings. A longer exact clause may disambiguate them; no location is guessed.
+The server carries the derived offsets through final claim validation instead of
+searching again for the first matching string. The model cannot supply offsets.
+It cannot cross JSON fields, documents, or disjoint passages. This handles sentences
+split by the catalogue without changing the catalogue, source text or old offsets.
+Different source spans can share one anchor ID; an identical source span repeated
+within one finding/claim/coverage assessment is rejected, including via a second ID.
+The result records precise quote offsets and each anchor in `citation_selection_audit`.
+No normalization, fuzzy matching, automatic quote repair or silent deduplication occurs.
+Workflow and
+market-snapshot fields remain in the complete packet but have no selectable handles.
+Publication metadata can support publication facts only. Version 3's gates remain
+in force for v5/v6/v7, with duplicate detection applied to exact spans. These checks detect incorrect attribution, **not** whether a real
+quotation logically supports the conclusion; semantic review is still required.
+
+The host derives each handle from the original source ID and character offsets.
+Handles cannot refer to packet IDs or
+governing-master IDs. Full lossless source text remains in the request; the catalogue
+is an auxiliary index, not a summary or completeness claim. Repeated spans that
+cannot uniquely map remain visible but unindexed. The catalogue increases request
+size; the existing explicit byte limit includes it and still fails without truncation.
+
+Code rejects non-unresolved catalyst claims citing only workflow/publication data,
+freshness claims with unresolved event timing, materiality claims with unresolved
+instrument/event/document coverage, and same-event claims with fewer than two distinct
+substantive source IDs. Two IDs do **not** prove source independence. Source category
+classification, fact status consistency and exact quotations do **not** prove semantic
+truth. Every accepted result remains a research draft requiring independent review.
+
+#### Materiality coverage is separate from a fact about missing documents
+
+An EVIDENCED `document_coverage` finding may correctly say an exhibit is missing.
+Versions 5 and 6 require a separate `materiality_coverage` object with `status`,
+`missing_documents`, `rationale`, and source-cited `evidence`. Status is one of
+`SUFFICIENT_FOR_RESEARCH`, `INCOMPLETE`, or `UNRESOLVED`. The first requires no
+declared missing required documents and at least one substantive citation; INCOMPLETE
+requires named missing documents. Publication/workflow metadata cannot establish
+coverage. Missing or inconsistent declarations fail closed.
+
+Version 6 additionally requires `assessment_scope` and `missing_document_reasons`
+(one `{document, reason}` for every named missing document). Blank scope, unexplained
+documents, duplicate names, or inconsistent mappings fail. Reasons must identify
+which necessary fact the missing document establishes and why captured evidence
+cannot establish it. The prompt separates optional corroboration and other criterion
+gaps from materiality prerequisites. It does not invent a blanket original-note,
+SEC-filing or primary-source requirement, and does not waive a document required
+by the governing rules or the actual economic conclusion. Reputable reporting of
+an attributable analyst action can support a limited research assessment; it does
+not automatically clear freshness, verification, watchlist or trade requirements.
+Code checks that explanations are present and consistent, **not** that their logic
+is correct. The fresh provider check below exercises this contract; independent
+semantic acceptance remains outstanding.
+
+Either a positive or negative materiality conclusion requires sufficient coverage
+plus the existing fact prerequisites. Incomplete or unresolved coverage still permits
+useful facts and unresolved criteria to be recorded. The declaration is persisted in
+`materiality_evidence_coverage` with semantic verification NOT_ESTABLISHED: these
+checks cannot detect a document the model omitted from its missing-document list,
+prove economic significance, or independently verify that its declared coverage
+is sufficient. This is a research evidence gate, not a strategy approval or changed
+threshold. Coverage from v3/v4 is never implicitly promoted to the new status.
+
+#### Offline v6 verification
+
+All 33 saved original outcomes replay unchanged: 17 accepted results reproduce
+exactly and 16 failures remain rejected, with unchanged original ledger hashes.
+On the latest four saved responses, 55/57 individual selections pass the v6
+resolver. The GPT-5.5 KALU headline is uniquely anchored and resolves; the TRUG
+ticker label remains ambiguous within its anchor and correctly fails. Mini's
+nonexistent KALU handle still fails. No old response or source text was repaired.
+
+Separate derived engineering probes add explicitly author-supplied scope/reason
+placeholders to exercise the new schema and final offsets. KALU GPT-5.5 and TRUG
+Mini pass those structural probes; the other two fail as above. They are not new
+v6 provider responses, corrected historical outcomes or semantic acceptance.
+This offline pass makes zero API calls. Original v5 results remain authoritative
+for those original requests, including their failures.
+
+#### v7 format corrections and offline verification (September 19, 2026)
+
+The two v6 Mini failures below motivate format-only changes:
+
+- The strict response schema enumerates every selectable excerpt ID from this
+  packet. The full packet and catalogue remain identical to v6. Unknown IDs still
+  fail local validation, and selecting a known ID does not bypass exact quotation,
+  source-field, ambiguity, category or fact checks. The schema is checked against
+  the packet before ledger reservation and again during response parsing.
+- The provider returns one `missing_documents: [{document, reason}]` list and no
+  separate `missing_document_reasons` field. Both compatibility fields in the saved
+  coverage record are derived from that single list. The original response is
+  retained unchanged. No fuzzy name matching, repair or historical conversion is
+  performed. Blank/duplicate documents, blank reasons, missing scope and conflicting
+  coverage still fail. Scope, necessary evidence and all substantive v6 requirements
+  remain unchanged; a nonempty reason is still not independent semantic verification.
+
+The schema rejects an empty catalogue or the documented enum limits (1,000 total
+enum values; over 250 values in a string enum with more than 15,000 characters).
+It never trims IDs or packet content to fit. The existing complete-request byte
+limit also applies. This can block large packets before dispatch; it is not a
+strategy threshold. Limits were checked against [Structured Outputs documentation](https://developers.openai.com/api/docs/guides/structured-outputs)
+on September 19, 2026.
+
+**434 tests passed**, including 31 v7 regressions covering packet-specific schemas,
+limit boundaries, rehashed schema tampering before billing, exact source locations,
+document/reason consistency, substantive gates, durable replay, and CLI preparation
+without credentials or provider calls. All 37 saved provider outcomes retained
+their original parsers and results: 19 exact successful replays and 18 rejections.
+All seven original ledger files had identical before/after hashes.
+
+The offline v7 implementation pass made zero paid calls. At that point live
+compatibility of the new enum schema and fresh model performance were unverified.
+The four-request comparison below uses
+the same KALU/TRUG development cases, models, 12,000-token output allowance and
+250,000-byte input limit; it was prepared separately before dispatch. No passing
+offline check establishes semantic acceptance, profitability or trading eligibility.
+No database migration is needed for these versioned local JSON records.
+
+#### Fresh v7 provider regression (September 19, 2026)
+
+Four actual-CLI calls completed at runtime commit
+`f75ea5357f16d80d6ad69b7c9644968679b84c1d`, with unchanged models, development
+cases, limits and transport settings. No retry or response repair occurred.
+
+| Case | Model | Contract result | Exact selections |
+|---|---|---|---:|
+| KALU | GPT-5 Mini | Rejected: publication metadata used as event evidence | 12/12 |
+| KALU | GPT-5.5 | Research draft admitted | 11/11 |
+| TRUG | GPT-5 Mini | Research draft admitted | 17/17 |
+| TRUG | GPT-5.5 | Research draft admitted | 19/19 |
+
+The provider accepted the new enum schema in all four requests. All 59 selected
+quotations resolve exactly, and neither invalid-ID nor duplicate-document-name
+failures recurred in this small sample. The three admitted outputs replay exactly.
+All 37 earlier outcomes remain unchanged; eight ledgers now contain 41 outcomes
+(22 admitted, 19 rejected). These are contract outcomes, not semantic accuracy.
+
+Mini KALU still mistook publication metadata for event time; the existing source
+category gate rejected it. It also claimed same-event support using a summary
+that lists other stocks and does not mention KALU. Mini TRUG still invented a
+universal primary/SEC/partner-document requirement despite passing the contract.
+GPT-5.5 preserved conditional financing, limited KALU Tier B scope and unresolved
+verification, without the previous unsupported common-share detail. Its TRUG
+freshness support is only at the reported-Friday date level, not current approval
+or original-scan availability. Its missing-document reasoning also invokes
+contingency resolution; the strategy does not universally require an announced
+transaction to have closed. Necessity and scope therefore still need semantic review.
+
+Calculated cost: **$0.529519**. Both models used their original limits, and all
+four calls recorded 10/180-second transport v2 settings. The existing 434-test
+result applies to the unchanged runtime; this follow-up is documentation-only.
+No result qualifies a trade, enables unattended operation or establishes strategy
+profitability. The cases are development regressions, not independent validation.
+
+#### Broader v7 unused-case comparison (September 19, 2026)
+
+Twelve subsequent authorized actual-CLI calls compared Mini and GPT-5.5 on six
+previously unused packets/captured bodies, with source-backed author references
+frozen before responses and withheld from models. Models, complete masters,
+12,000 output-token allowance, 250,000-byte request limit and transport v2 remained
+unchanged. No retry, repair, substitution or runtime change occurred.
+
+| Case | Mini contract outcome | GPT-5.5 contract outcome |
+|---|---|---|
+| PANW | Rejected: quotation location (17/24 exact) | Rejected: quotation location (12/13 exact) |
+| FBRT | Rejected: source category (15/15 exact) | Research draft admitted (18/18 exact) |
+| AIEQ | Rejected: quotation location (14/15 exact) | Research draft admitted (19/19 exact) |
+| SDST | Rejected: quotation location (13/15 exact) | Research draft admitted (15/15 exact) |
+| LCID | Incomplete: 12,000 output-token limit | Research draft admitted (17/17 exact) |
+| GEV | Rejected: event fact unresolved (21/21 exact) | Research draft admitted (17/17 exact) |
+
+Five admitted results replay exactly; all remain ineligible for handoff. Eight
+historical ledgers are byte-identical to the frozen plan. There are 53 preserved
+outcomes (27 admitted drafts, 26 non-admitted); these are not accuracy scores.
+The eleven complete drafts contain 178/189 exactly resolved selections. No
+unknown-ID or duplicate-document-name failure appeared in complete drafts.
+The incomplete LCID response was preserved without partial-JSON repair or scoring.
+
+Semantic findings remain material. Mini assessed Netflix instead of target AIEQ,
+invented freshness interpretations, and retained unsupported universal primary
+document requirements. GPT-5.5 correctly separated AIEQ from Netflix but still
+marked Netflix freshness supported inside the AIEQ candidate record; its rationale
+caveat does not establish target-level freshness or ETF universe eligibility.
+Both models omitted the full older/newer SDST notice-deadline distinction. Useful
+GPT-5.5 results preserved limited FBRT analyst scope, SDST financing capacity versus
+proceeds, Lucid plans/targets versus realized results, and GE Vernova forecasts
+versus reported backlog. Date knowledge alone did not clear freshness on those
+four stronger-model cases.
+
+All 30 frozen case-specific expectations per model and four common expectations
+per case were assessed separately as SATISFIED, VIOLATED or NOT_ESTABLISHED, with
+original response evidence. Assessment is by the implementation author; these
+are selected challenge cases from one scan, not independent acceptance or a
+representative session. PANW/FBRT intentionally share an article within the set.
+Exact quote location does not prove entailment, materiality or policy correctness.
+The two-source implementation prerequisite must not become a new universal
+two-independent-news-source strategy rule. Governing source rules still control.
+
+Calculated cost: **$1.7096175** (Mini $0.1418775; GPT-5.5 $1.5677400).
+Returned models: `gpt-5-mini-2025-08-07`, `gpt-5.5-2026-04-23`.
+The pre-run commit was GitHub `3c8c75a548b145167efb4d0581a5439077b06728`,
+matching local `1cb6a793225aad942500b8904d7a163b354c986d` at tree
+`bc25f75f9e7d75939dfdeda3cba8ba479148ad01`. Runtime is unchanged from the
+434-test implementation; this results update is documentation only.
+
+Neither model is accepted for unattended use. Target/event binding, approved
+freshness inputs, quotation reliability and independent semantic acceptance remain
+outstanding. No production configuration, master, Journal, signal, broker, schedule,
+deployment or execution changed. Live runtime configuration was not reverified.
+
+#### Fresh v6 provider regression (September 19, 2026)
+
+Four unchanged-limit CLI calls on the previously tested KALU/TRUG cases completed
+at commit `baf4a34a01ebc6f36071839796e2c7f2b76a6075`. GPT-5.5 passed both contracts
+with 29/29 exact selections, gave a limited Tier B KALU assessment, and kept TRUG
+materiality/freshness unresolved. Mini's KALU response still used an invalid ID
+three times; its TRUG citations matched, but duplicated document-name fields
+differed and failed the required mapping. No repair or retry occurred.
+
+Mini stopped demanding an original note for KALU, but retained unsupported
+universal primary/corroborating-document requirements for TRUG. The stronger
+model's missing-document reasons were more specific; they are not independently
+verified, and its TRUG common-share wording exceeds the article's generic stock
+description. All outputs remain research-only and ineligible for handoff.
+
+Calculated cost: $0.4754808 across four calls. This is a development regression,
+not independent accuracy evidence. Both admitted results replay exactly. The
+403-test result applies to the unchanged runtime; this later update is documentation
+only. Additional API tests require checking balance/cost without weakening test
+models, cases or limits to fit an insufficient balance.
+
+The five model findings are persisted as `fact_findings` alongside the attributed
+review artifact; the original provider response stays in the immutable ledger.
+No database migration is needed: these are additive JSON payloads in the existing
+local ledger. Nothing writes to trading services, the Journal or a broker.
+
+Regression coverage includes decoded quotation/newline handling, workflow-only
+claims, missing exhibits/facts, publication-versus-event timestamps, price/snapshot
+misuse, unknown/master IDs, capability violations, catalogue tampering, exact input
+size, restart recovery and preservation of v1/v2/v3/v4 histories. Version 4 also covers
+wrong-passage support, mixed workflow/document citations, publication-versus-event
+use, narrow quote offsets, ambiguity, and useful positive assessments. These isolated tests are
+infrastructure fixtures, not trades or strategy observations. Version 5 adds exact
+cross-boundary source spans, distinct quotes sharing anchors, repeated source-span
+rejection, separate completeness status, missing-document conflicts and useful
+research-only outputs with incomplete evidence. It has been checked offline against
+saved v4 responses and in a bounded four-call v5 provider regression on MEDS/BIAF.
+GPT-5.5 passed both cases; Mini passed BIAF and was rejected for two altered MEDS
+quotations. All four declared incomplete materiality coverage and kept materiality
+unresolved. This development-informed sample is not independent accuracy evidence
+and does not test a real provider's sufficient-coverage conclusion. Two Mini calls
+took more than 60 seconds end-to-end using the acceptance transport's 180-second
+read timeout. The CLI now defaults to the same 180-second read timeout, configurable
+with `--read-timeout-seconds`. This is a socket read timeout, not a total request
+deadline or guarantee of success. The client uses a fixed endpoint, ignores ambient
+proxy/netrc settings, disallows redirects, and makes no automatic retries. A timeout
+keeps the reserved attempt blocked even if a later invocation requests more time.
+New calls persist `TRANSPORT_CONFIGURED` with `openai-responses-http-v2` and the
+actual timeout settings before dispatch, without credentials. Historical requests
+and responses are not relabeled; the v5 research prompt/parser are unchanged.
+
 - The complete text of the three governing masters, with matching document IDs, versions, revisions and content digests. This text comes from a separate authorized document read, not discovery sources or model output.
 - Every source in one immutable evidence packet, clearly separated as untrusted data. Source instructions cannot add tools or broker permissions.
 - The review criteria and a strict structured-output schema. Model output contains assessments, rationales and exact source quotes only. The program assigns the packet identity, actual returned model, implementation/prompt version, timestamps and trace IDs.
