@@ -9,8 +9,9 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 ### Default CLI: evidence gaps and follow-ups v9
 
 The default CLI prepares `1.8.0-automated-research` / `governed-research-v9`
-through `research_gaps.prepare_gap_request`. This is an **offline-tested new
-contract with no v9 paid calls or independent semantic acceptance yet**.
+through `research_gaps.prepare_gap_request`. Offline regressions and a bounded
+12-call provider comparison are complete. **Independent semantic acceptance has
+not occurred.**
 
 The v8 comparison below exposed two admitted semantic problems: treating absent
 independent corroboration as an observed failure, and requiring an absent legal
@@ -60,9 +61,65 @@ these are infrastructure research, not Strategy #1 observations.
 economic significance, or positive corroboration judgment. A model can still
 describe an unnecessary gap in plausible language. Those declarations remain
 unverified; a document's necessary status is never approved by this adapter.
-Fresh provider behavior and independent semantic review remain outstanding.
+Independent semantic review remains outstanding; fresh provider results follow.
 Neither model is accepted for unattended qualification. No database migration,
 production configuration change, Journal write, merge or deployment is included.
+
+#### v9 provider comparison — 2026-09-19
+
+Six previously unused historical packets (IREN, LRCX, AAPL, GIPR, FXY, TER), each
+with Mini and GPT-5.5, produced twelve complete provider responses. Full source
+and master inputs, runtime, 12,000 output tokens, 250,000 input bytes and author
+references were frozen before dispatch. No retries, repair, model substitution,
+input shortening or runtime changes occurred.
+
+| Case | Mini local result | GPT-5.5 local result |
+| --- | --- | --- |
+| IREN | `MATERIALITY_COVERAGE_NOT_SUFFICIENT` | Admitted research draft |
+| LRCX | `BINDING_SUBSTANTIVE_EVIDENCE_REQUIRED` | Admitted research draft |
+| AAPL | `FOLLOWUP_GAP_REFERENCE_INVALID` | Admitted research draft |
+| GIPR | `COVERAGE_SUFFICIENCY_CONFLICT` | Admitted research draft |
+| FXY | `FOLLOWUP_GAP_REFERENCE_INVALID` | `READ_THROUGH_SUBJECT_REQUIRED` |
+| TER | `DUPLICATE_SOURCE_SPAN` | Admitted research draft |
+
+Five admitted drafts replay exactly; seven rejections remain rejected. All ten
+historical ledgers are unchanged. Cumulative history is 77 provider outcomes,
+38 admitted and 39 blocked under their original versions. All 375 individual
+excerpt selections resolve to source locations, including repeated occurrences;
+this does not waive duplicate-span validation or prove semantic correctness.
+All twelve keep freshness and eight non-catalyst criteria insufficient, same-event
+verification insufficient and handoff eligibility false. Persisted follow-ups
+carry nonbinding proposal authority. Missing corroboration never becomes an
+observed failure in this set.
+
+Author review found GPT-5.5 better preserved analyst dates, planned versus actual
+events, optional documents and the historical TER earnings event. This is a
+small-set finding, not an accuracy or acceptance score. LRCX/GIPR gap necessity
+still needs independent review; GIPR's captured bounded suspension/delisting stay
+was not assessed. FXY prose names the BOJ but leaves the structured underlying
+subject null, so it is blocked. Mini still invents document requirements, mixes
+operational checks into materiality, conflates publication with event timing in
+some cases and borrows old earnings significance for a television recommendation.
+Some requested numerical/secondary-event facts are unassessed in both models;
+those remain NOT_ESTABLISHED. Exact sources and cautious labels alone do not
+validate the judgments.
+
+Calculated cost: **$1.46127450** (Mini $0.11123450; GPT-5.5 $1.35004000), using
+returned token usage and checked official prices. Returned models were
+`gpt-5-mini-2025-08-07` and `gpt-5.5-2026-04-23`. Runtime local commit
+`f9464a3595a3e4cc75234de13c0707a44b605a90` matches GitHub implementation commit
+`c095c22ecf7cb9e21a06e2745f2c6fe9a1d18450` at tree
+`e1320e59f9902e4e7a95d7545301939991beef7f`. Ledger SHA-256:
+`7bc8463dc4ef3882847d040f5d28125266039e0d79a116f8909fc0eb6ae9e486`.
+
+The six packet IDs, substantive source IDs and captured document-body hashes
+were unused in the prior 65 paid requests and distinct across the six. Shared
+session and generic source boilerplate remain correlated. Thirty per-case author
+expectations and four common expectations were frozen before responses; source
+claims remain untrusted historical inputs. Private packets, masters, credentials,
+raw responses and assessments remain local. Independent semantic review and
+approved handling of non-company event subjects remain next steps, using saved
+responses without further API calls. No strategy eligibility is established.
 
 ### Historical target and event research v8
 
