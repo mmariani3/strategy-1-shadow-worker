@@ -5,7 +5,7 @@ from pathlib import Path
 import sqlite3
 
 from evidence_review import canonical, digest, unresolved_draft, validate_draft
-from research_reviewer import ReviewBlocked, parse_response, VERSION, PROMPT_VERSION
+from research_reviewer import ReviewBlocked, parse_response, compact_request, evidence_message
 
 
 def utc_now():
@@ -46,7 +46,9 @@ class AttemptLedger:
                 for row in self.db.execute('select * from events where request_id=?', (request_id,))}
 
     def claim(self, request, now):
-        expected = digest(dict(version=VERSION, prompt_version=PROMPT_VERSION, body=request['body']))
+        compact_request(request)
+        expected = digest(dict(version=request['implementation_version'],
+                               prompt_version=request['prompt_version'], body=request['body']))
         if request['request_id'] != expected:
             raise ReviewBlocked('REQUEST_DIGEST_MISMATCH')
         self.db.execute('begin immediate')
@@ -83,7 +85,7 @@ def execute_once(ledger, packet, request, provider, clock=utc_now):
     validate_draft(packet, unresolved_draft(packet, clock()), clock())
     if packet['packet_id'] != request['packet_id']:
         raise ReviewBlocked('REQUEST_PACKET_MISMATCH')
-    if request['body']['input'][-1] != {'role': 'user', 'content': 'UNTRUSTED_CAPTURED_EVIDENCE:\n' + canonical(packet)}:
+    if request['body']['input'][-1] != evidence_message(packet, compact_request(request)):
         raise ReviewBlocked('REQUEST_EVIDENCE_MISMATCH')
     claimed = ledger.claim(request, clock())
     history = ledger.events(request['request_id'])

@@ -51,7 +51,7 @@ The report index lists every resulting packet ID and reruns the offline code che
 
 Do not commit private captures or source documents to Git. Store contents may contain copyrighted source material and project evidence. No hosted retention, backup or deployment configuration is supplied by this local implementation. No production schema migration is required.
 
-## September 18 acceptance evidence
+## Initial September 18 acceptance evidence
 
 - Original funnel retained: **112 records**.
 - Deduplicated recorded URLs: **54** (22 SEC, 32 news).
@@ -62,6 +62,18 @@ Do not commit private captures or source documents to Git. Store contents may co
 - Offline model-request size check: **86** records fit the existing 250,000-byte limit; **one** exceeds it; **25** remain missing source evidence. No model requests were sent or charged.
 
 The original scan is still PARTIAL. No candidate has been independently qualified by this work and opportunity count remains unknown. Captured filing covers may refer to exhibits that this nonrecursive collector has not fetched. Article text may contain navigation or unrelated tickers. Longer documents can increase model input costs; retrieval success is not a claim of lower total AI cost. The next review stage must keep relevant, exact evidence with traceable exclusions rather than silently truncate documents or loosen eligibility.
+
+### Subsequent source-readiness review
+
+A separate explicit one-document retry with a recorded 10 MB resource bound captured the missing SEC filing: 4,002,188 original bytes, just over the initial limit. The old failed outcome remains intact. All **54 original URLs** are now captured. This was a local acceptance operation with its own persisted URL/size/attempt policy, not a change to the CLI's 4 MB default or an automatic retry.
+
+The reviewer now uses [lossless source encoding](README-automated-reviewer.md#lossless-source-encoding), eliminating duplicate raw/text copies. All 87 packets from the original 53-document capture fit the existing request limit. Including the newly recovered long filing gives **86 within-limit records, one explicitly held long-document record (FEAM), and 25 records without linked catalyst evidence**, preserving all 112 records. An offline reconstruction check reproduced every packet exactly; cached collection made zero HTTP requests.
+
+A bounded external search was performed for each of the 25 absent-source symbols. Those results are separate, unverified research leads, not automatically attached evidence or proof of a fresh catalyst. Direct issuer/SEC reads confirmed examples of rights, warrants and ETFs among the leads. A current instrument identity, company/event relevance, publication versus event timing, and required source coverage must be established before qualification. Do not turn suffixes, article categories or old search results into new strategy filters.
+
+Eight purposefully selected source-cited reference cases were prepared locally before any separate API-model response: matching events, unrelated news/filing events, missing exhibits, older event dates, instrument identity, earnings previews and absent evidence. They are implementation-author research references, not independent ground truth, a representative accuracy sample or Strategy #1 observations. Seven within-limit model requests were prepared with a non-dispatch placeholder model; the missing-source case remains blocked. No API call or semantic acceptance occurred.
+
+The full repository suite passed **276 tests**, including lossless Unicode/nested-record reconstruction, altered/duplicate source rejection, exact byte boundaries, evidence tampering before call reservation, historical response recovery and version attribution. Long-document interpretation, missing exhibits, new-event verification, independently accepted reference assessment and hosted integration remain unresolved.
 
 ## Tests and deployment status
 
