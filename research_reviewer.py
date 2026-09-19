@@ -47,12 +47,21 @@ def evidence_message(packet, compact=True):
 
 
 def compact_request(request):
+    from research_facts import VERSIONS as FACT_VERSIONS
     versions = (request.get('implementation_version'), request.get('prompt_version'))
     if versions == LEGACY_VERSIONS:
         return False
-    if versions == (VERSION, PROMPT_VERSION):
+    if versions in ((VERSION, PROMPT_VERSION), FACT_VERSIONS):
         return True
     raise ReviewBlocked('UNSUPPORTED_REQUEST_VERSION')
+
+
+def request_evidence_message(packet, request):
+    from research_facts import VERSIONS as FACT_VERSIONS, fact_evidence_message
+    compact = compact_request(request)
+    if (request['implementation_version'], request['prompt_version']) == FACT_VERSIONS:
+        return fact_evidence_message(packet)
+    return evidence_message(packet, compact)
 
 
 class Quote(Strict):
@@ -177,7 +186,13 @@ def parse_response(packet, request, response, reviewed_at):
             texts.append(content.get('text'))
     if len(texts) != 1 or not isinstance(texts[0], str):
         raise ReviewBlocked('AMBIGUOUS_PROVIDER_TEXT')
-    draft = ModelDraft.model_validate_json(texts[0])
+    from research_facts import VERSIONS as FACT_VERSIONS, resolve_draft
+    facts = None
+    if (request['implementation_version'], request['prompt_version']) == FACT_VERSIONS:
+        resolved, facts = resolve_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    else:
+        draft = ModelDraft.model_validate_json(texts[0])
     sources = {source['source_id']: source['text'] for source in packet['sources']}
     claims = []
     for claim in draft.claims:
@@ -196,8 +211,12 @@ def parse_response(packet, request, response, reviewed_at):
             'Automated research draft only; semantic correctness has not been independently established.',
             'Captured evidence is not a prospective approval; no trade handoff is permitted.'])
     artifact = validate_draft(packet, review, reviewed_at)
-    return {'request_id': request['request_id'], 'provider_response_id': response['id'],
+    result = {'request_id': request['request_id'], 'provider_response_id': response['id'],
         'requested_model': request['body']['model'], 'returned_model': response['model'],
         'prompt_version': request['prompt_version'], 'masters_digest': request['masters_digest'],
         'usage': deepcopy(response.get('usage')), 'review_artifact': artifact,
         'admission': 'RESEARCH_ONLY', 'eligible_for_handoff': False}
+    if facts is not None:
+        result['fact_findings'] = facts
+        result['research_scope'] = 'DOCUMENT_FACTS_AND_CATALYST_ONLY'
+    return result

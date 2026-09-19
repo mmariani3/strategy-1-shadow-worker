@@ -6,6 +6,53 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
+### Default CLI: factual research v3
+
+The CLI now prepares `1.2.0-automated-research` / `governed-research-v3` requests
+through `research_facts.prepare_fact_request`. The old `research_reviewer.prepare_request`
+function remains the explicit v2 compatibility API; old requests/results retain their
+original parsers and attribution. No historical output is upgraded or relabeled.
+
+Version 3 first asks for five source-backed findings: instrument identity, catalyst
+event, actual event/announcement timing, publication timing, and document coverage
+(including referenced exhibits absent from the capture). It then assesses catalyst
+freshness, materiality and same-event evidence. Workflow fields remain visible but
+cannot substantiate positive/negative catalyst findings. Missing review fields are
+insufficient evidence, not an observed failure.
+
+This **document-only research adapter** cannot establish market context, liquidity,
+participation, setup, risk, prospective confirmation, current approvals or macro
+clearance. Code requires these assessments to remain unresolved, even if the model
+claims otherwise. Their corresponding accepted measurement/review adapters are not
+implemented here. This restricts software capability; it does not change strategy
+rules, live Worker inputs or experimental eligibility.
+
+The model cites stable excerpt IDs. The host derives each handle from the original
+source ID and exact character offsets, reconstructs escaped quotations locally and
+runs the existing exact-source validation. Handles cannot refer to packet IDs or
+governing-master IDs. Full lossless source text remains in the request; the catalogue
+is an auxiliary index, not a summary or completeness claim. Repeated spans that
+cannot uniquely map remain visible but unindexed. The catalogue increases request
+size; the existing explicit byte limit includes it and still fails without truncation.
+
+Code rejects non-unresolved catalyst claims citing only workflow/publication data,
+freshness claims with unresolved event timing, materiality claims with unresolved
+instrument/event/document coverage, and same-event claims with fewer than two distinct
+substantive source IDs. Two IDs do **not** prove source independence. Source category
+classification, fact status consistency and exact quotations do **not** prove semantic
+truth. Every accepted result remains a research draft requiring independent review.
+
+The five model findings are persisted as `fact_findings` alongside the attributed
+review artifact; the original provider response stays in the immutable ledger.
+No database migration is needed: these are additive JSON payloads in the existing
+local ledger. Nothing writes to trading services, the Journal or a broker.
+
+Regression coverage includes decoded quotation/newline handling, workflow-only
+claims, missing exhibits/facts, publication-versus-event timestamps, price/snapshot
+misuse, unknown/master IDs, capability violations, catalogue tampering, exact input
+size, restart recovery and preservation of v1/v2 histories. These isolated tests are
+infrastructure fixtures, not trades or strategy observations.
+
 - The complete text of the three governing masters, with matching document IDs, versions, revisions and content digests. This text comes from a separate authorized document read, not discovery sources or model output.
 - Every source in one immutable evidence packet, clearly separated as untrusted data. Source instructions cannot add tools or broker permissions.
 - The review criteria and a strict structured-output schema. Model output contains assessments, rationales and exact source quotes only. The program assigns the packet identity, actual returned model, implementation/prompt version, timestamps and trace IDs.

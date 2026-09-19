@@ -5,7 +5,7 @@ from pathlib import Path
 import sqlite3
 
 from evidence_review import canonical, digest, unresolved_draft, validate_draft
-from research_reviewer import ReviewBlocked, parse_response, compact_request, evidence_message
+from research_reviewer import ReviewBlocked, parse_response, compact_request, request_evidence_message
 
 
 def utc_now():
@@ -85,7 +85,7 @@ def execute_once(ledger, packet, request, provider, clock=utc_now):
     validate_draft(packet, unresolved_draft(packet, clock()), clock())
     if packet['packet_id'] != request['packet_id']:
         raise ReviewBlocked('REQUEST_PACKET_MISMATCH')
-    if request['body']['input'][-1] != evidence_message(packet, compact_request(request)):
+    if request['body']['input'][-1] != request_evidence_message(packet, request):
         raise ReviewBlocked('REQUEST_EVIDENCE_MISMATCH')
     claimed = ledger.claim(request, clock())
     history = ledger.events(request['request_id'])

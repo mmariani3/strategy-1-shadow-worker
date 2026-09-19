@@ -6,7 +6,8 @@ from pathlib import Path
 
 from evidence_pipeline import write_once
 from evidence_review import canonical, digest
-from research_reviewer import OpenAIReviewer, prepare_request
+from research_reviewer import OpenAIReviewer
+from research_facts import prepare_fact_request as prepare_request
 from review_attempts import AttemptLedger, execute_once, utc_now
 from code_review import inspect_packet
 
