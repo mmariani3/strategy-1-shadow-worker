@@ -6,9 +6,38 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-### Default CLI: clause support and host abstentions v11
+### Default CLI: readable clause support v12
 
-The default CLI prepares `1.10.0-automated-research` / `governed-research-v11`
+The default is now `1.11.0-automated-research` / `governed-research-v12`, prepared
+by `research_readable.prepare_readable_request`. It retains the v11 safeguards
+below and fixes its quote representation contract: the model copies the exact
+readable `selectable_excerpts[id].text`; the host deterministically JSON-encodes
+that substring to recover original source offsets. Both readable and encoded
+quotes persist. No whitespace normalization, fuzzy matching or semantic repair.
+The full suite passes **624 tests**, including 31 support-contract and 16 readable
+quote regressions. A fixture explicitly preserves v11 rejection while v12 accepts
+the correctly specified readable representation; no real old outcome is upgraded.
+
+The first v11 fresh-case campaign used previously untested VWAV and PH packets,
+each with Mini and GPT-5.5, and cost **$0.77193025**. All four provider responses
+completed and remained blocked: Mini twice omitted required support paths;
+GPT-5.5 twice failed quote matching. v11 incorrectly asked for an encoded quote
+field absent from the visible excerpt catalog. This implementation defect makes
+those rejections unsuitable as model-quality scores. Original v11 requests,
+responses, parser behavior and outcomes remain frozen; v12 does not relabel them.
+Ledger SHA-256: `c567ab3986719f6fe0726f0c8fc740494fa4b9fc5530b37b194fee5c63f6e7e2`.
+
+Source inspection also found actual Mini issues: treating missing exhibits as
+materiality prerequisites, mixing event occurrence with future effectiveness,
+and positive materiality labels inconsistent with its own incomplete/Tier C
+explanations. GPT-5.5 preserved more chronology and optional-document distinctions;
+that is author review, not independent acceptance. No model is approved for
+unattended qualification. A new-version check of these cases is development
+compatibility, not a fresh or independent holdout.
+
+### Clause support and host abstentions introduced in v11
+
+The historical v11 CLI prepared `1.10.0-automated-research` / `governed-research-v11`
 through `research_support.prepare_support_request`. Historical v1-v10 parsing
 and provider records are unchanged. This is a research proposal, not an accepted
 automated qualification method.

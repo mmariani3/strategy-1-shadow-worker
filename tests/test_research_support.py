@@ -166,9 +166,9 @@ def test_v11_replay_does_not_relabel_v10(support_case, masters):
     assert parse_response(p, old_req, reply(old), NOW) == old_result
 
 
-def test_default_cli_remains_prepare_only(support_case, masters, monkeypatch, capsys):
+def test_legacy_v11_cli_remains_prepare_only(support_case, masters, monkeypatch, capsys):
     import run_research_reviewer as cli
-    assert cli.prepare_request is prepare_support_request
+    monkeypatch.setattr(cli, 'prepare_request', prepare_support_request)
     p, _ = support_case; root = ledger_path().parent
     (root/'p.json').write_text(canonical(p), encoding='utf-8')
     (root/'m.json').write_text(canonical(masters), encoding='utf-8')
