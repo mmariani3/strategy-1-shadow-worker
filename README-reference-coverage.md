@@ -109,6 +109,10 @@ No paid requests, production changes, migrations or methodology changes occurred
 
 ## Next review boundary
 
+The [attributed completeness-review stage](README-completeness-review.md) now
+records the explicit source/prose judgments below without altering this location
+audit or the original model admission. Its results remain infrastructure-only.
+
 Use the flagged passages and corresponding original prose for explicit, attributable
 semantic assessment. Decide whether each supplied anchor is relevant to the chosen
 scope and whether the answer preserves its meaning and qualifications. Revisions to

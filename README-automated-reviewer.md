@@ -988,6 +988,11 @@ The CLI prints only status, IDs, paths and fixed error types. Provider error bod
 
 ## Independent assessment
 
+For saved v14 drafts, use the [offline completeness-review procedure](README-completeness-review.md)
+to record scoped judgments about fees, conditions, timing and counterevidence.
+This separate author-review record does not establish independent acceptance and
+does not change the model prompt or historical admission results.
+
 `review_evaluation.compare` validates both review artifacts and requires a separately attributed, source-backed reference. It records criterion denominators, agreement/disagreement, model abstentions, unresolved references and supported claims that the reference does not support. It retains both rationales and artifact IDs.
 
 Assessor identity, method version, whether the reference preceded the model response, and independence limitations must be supplied. The comparison rejects self-attribution but cannot verify real-world assessor independence. It introduces no passing percentage. A schema-valid result or high agreement count cannot activate the reviewer.
