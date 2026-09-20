@@ -47,6 +47,9 @@ def evidence_message(packet, compact=True):
 
 
 def compact_request(request):
+    from research_passages import VERSIONS as PASSAGE_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == PASSAGE_VERSIONS:
+        return True
     from research_readable import VERSIONS as READABLE_VERSIONS
     from research_support import VERSIONS as SUPPORT_VERSIONS
     from research_facts import VERSIONS as FACT_VERSIONS
@@ -66,6 +69,9 @@ def compact_request(request):
 
 
 def request_evidence_message(packet, request):
+    from research_passages import VERSIONS as PASSAGE_VERSIONS, passage_evidence_message
+    if (request.get('implementation_version'), request.get('prompt_version')) == PASSAGE_VERSIONS:
+        return passage_evidence_message(packet)
     from research_readable import VERSIONS as READABLE_VERSIONS
     from research_support import VERSIONS as SUPPORT_VERSIONS
     from research_subjects import VERSIONS as SUBJECT_VERSIONS
@@ -237,8 +243,12 @@ def parse_response(packet, request, response, reviewed_at):
     coverage = selection_audit = None
     binding = None
     versions = (request['implementation_version'], request['prompt_version'])
-    scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS, READABLE_VERSIONS)
-    if versions == READABLE_VERSIONS:
+    from research_passages import VERSIONS as PASSAGE_VERSIONS, resolve_passage_draft
+    scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS, READABLE_VERSIONS, PASSAGE_VERSIONS)
+    if versions == PASSAGE_VERSIONS:
+        resolved, facts, coverage, selection_audit, binding = resolve_passage_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == READABLE_VERSIONS:
         validate_readable_request(packet, request)
         resolved, facts, coverage, selection_audit, binding = resolve_readable_draft(packet, texts[0])
         draft = ModelDraft.model_validate(resolved)

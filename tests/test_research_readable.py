@@ -97,9 +97,9 @@ def test_v11_original_failure_and_v12_durable_result_are_distinct(readable_case,
     assert out['review_artifact']['review']['implementation_version']==VERSIONS[0]
 
 
-def test_default_cli_prepares_without_provider(readable_case,masters,monkeypatch,capsys):
+def test_legacy_v12_cli_prepares_without_provider(readable_case,masters,monkeypatch,capsys):
     import run_research_reviewer as cli
-    assert cli.prepare_request is prepare_readable_request
+    monkeypatch.setattr(cli, 'prepare_request', prepare_readable_request)
     p,_=readable_case;root=ledger_path().parent
     (root/'p.json').write_text(canonical(p),encoding='utf-8');(root/'m.json').write_text(canonical(masters),encoding='utf-8')
     def forbidden(*a,**k):raise AssertionError('No credentials/provider')

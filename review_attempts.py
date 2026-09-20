@@ -105,6 +105,9 @@ def execute_once(ledger, packet, request, provider, clock=utc_now):
     from research_readable import VERSIONS as READABLE_VERSIONS, validate_readable_request
     if (request['implementation_version'], request['prompt_version']) == READABLE_VERSIONS:
         validate_readable_request(packet, request)
+    from research_passages import VERSIONS as PASSAGE_VERSIONS, validate_passage_request
+    if (request['implementation_version'], request['prompt_version']) == PASSAGE_VERSIONS:
+        validate_passage_request(packet, request)
     claimed = ledger.claim(request, clock())
     history = ledger.events(request['request_id'])
     if 'COMPLETED' in history:

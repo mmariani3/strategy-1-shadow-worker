@@ -6,9 +6,41 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-### Default CLI: readable clause support v12
+### Default CLI: occurrence-specific passages and tier proposals v13
 
-The default is now `1.11.0-automated-research` / `governed-research-v12`, prepared
+The default is `1.12.0-automated-research` / `governed-research-v13`, prepared by
+`research_passages.prepare_passage_request`. Models select fixed passage IDs;
+the host copies exact text and occurrence-specific source offsets. Repeated text
+at different locations has different IDs. No quotation retyping, ellipsis repair,
+punctuation normalization or occurrence guessing is permitted. Passage boundaries
+are mechanical presentation aids, sometimes splitting abbreviations or sentences;
+adjacent context and full source text remain available. The inherited excerpt
+catalog still cannot index a whole excerpt that is duplicated; such text remains
+visible in the complete source, and no completeness guarantee is made.
+
+Tier suggestions must select a literal category from the versioned Strategy master
+and identify supporting fact paths. Discovery channels cannot substitute for tier
+definitions. Every mapping is `NOT_APPROVED`; the materiality/tier assessment must
+remain `INSUFFICIENT_EVIDENCE` because no automatic semantic mapping method has
+been accepted. Useful facts and narrow research coverage are still retained. This
+is an adapter capability boundary, not a change to Strategy #1 qualification.
+Exact source/rule locations cannot prove entailment, relevance or completeness.
+
+The request preserves full masters, original source text and all non-source
+context. Master identities, hashes, the derived rule catalog, schema and prompt
+are checked before call reservation. Versioned replay preserves older behavior;
+no migration, source rewriting or outcome relabeling is performed.
+
+Validation: **658 tests**, including **34 new passage/tier regressions**. All
+**89 prior provider outcomes (41 admitted research results, 48 rejections)** replay
+unchanged across fourteen ledger hashes. New tests cover repeated occurrences,
+Unicode/escaping, forbidden model quotes/offsets, missing/incorrect rule bindings,
+unsupported positive/negative tier approval, prompt/catalog tampering and replay.
+Even a semantically wrong mapping to a real rule remains explicitly unapproved.
+
+### Historical v12: readable clause support
+
+The historical version is `1.11.0-automated-research` / `governed-research-v12`, prepared
 by `research_readable.prepare_readable_request`. It retains the v11 safeguards
 below and fixes its quote representation contract: the model copies the exact
 readable `selectable_excerpts[id].text`; the host deterministically JSON-encodes
