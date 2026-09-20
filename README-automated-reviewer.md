@@ -25,9 +25,64 @@ entailment, completeness, necessary gaps or appropriate tier mapping. All propos
 remain unapproved and all results remain research-only, ineligible for handoff.
 
 Offline verification: **688 tests passed**, including 30 new regressions; all 93
-saved provider outcomes replay unchanged across fifteen unchanged ledgers. A paired
-development comparison on the already-used ABTS/CVI documents is being prepared;
-it is not a held-out accuracy test, independent review or Strategy #1 evidence.
+saved provider outcomes replay unchanged across fifteen unchanged ledgers.
+
+#### Completed paired development comparison, September 19, 2026 (Pacific)
+
+The already-used ABTS/CVI documents and unchanged source-backed reference were
+frozen before four new calls. This is not a held-out accuracy test, independent
+review or Strategy #1 evidence. Full masters/source/context and the original
+12,000-output-token / 250,000-input-byte allowances were retained. There were no
+retries, response repairs or runtime changes during the campaign.
+
+| Case | Model | Technical outcome | Usage-priced cost |
+| --- | --- | --- | ---: |
+| ABTS | Mini | Rejected: substantive-source category check | $0.02886700 |
+| ABTS | GPT-5.5 | Research draft admitted; semantically unverified | $0.35740000 |
+| CVI | Mini | Rejected: selected-event scope mismatch | $0.02861450 |
+| CVI | GPT-5.5 | Research draft admitted; semantically unverified | $0.37186000 |
+
+All four completed; total **$0.78674150**. All 398 passage selections referenced
+existing locations (including repeats); this is not an accuracy score. The two
+GPT-5.5 drafts passed structural checks versus zero in the preceding v13 campaign.
+Two reused cases cannot establish a reliable improvement rate or deployment readiness.
+
+Selected source-backed author findings (not an exhaustive independent review):
+
+- Mini/ABTS incorrectly expected the issuer filing to use the private strategy's
+  tier labels, confused rule and source numbers, and required later funding facts
+  without establishing that they were necessary for reported agreement significance.
+- Mini/CVI separated July29 from September18, but still treated primary documents
+  and setup approval as mandatory materiality gaps and cited headlines for workflow
+  metadata. The scope check rejected its context-labelled gap support.
+- GPT-5.5/ABTS retained adjacent conditional financing/default/180-day passages,
+  commitment-versus-proceeds and stated dilution, with optional exhibit followup.
+  It left tier mapping unresolved. It omitted the $7.5M noncontingent commitment
+  fee from extracted findings: structural admission does not establish completeness.
+- GPT-5.5/CVI separated event/publication dates and other issuers, preserved technical
+  context, and proposed the earnings/guidance category for a reported sales surprise.
+  That proposal remains NOT_APPROVED; semantic fit and whether the proposed sales
+  benchmark gap is indispensable remain unverified, not new strategy prerequisites.
+
+All **97 saved outcomes** replay unchanged: 43 historical research admissions and
+54 rejections across sixteen unchanged ledgers. Neither model is accepted for
+unattended qualification. Next work should use these saved outputs for completeness
+and semantic review before a new paid, held-out comparison.
+
+Tested runtime: local `5706ae376ac1e36a2f67a808db405adf5738529e`, GitHub
+`138a7e362099f246237402a874b649574b1c090d`, matching tree
+`08a6301b89652ed9d50ab4736fdd5b520e0f267f`. Original reference SHA-256:
+`80715eca302555c43c65b83a0ba17de8a0adf0effc96fbb7f4480b62e8722055`.
+The private evaluation package retains requests, responses, ledger, frozen inputs,
+eleven attributable author findings and final verification. Historical v13 records
+below are unchanged; no prior rejection was promoted.
+
+Estimated remaining API credit is **$1.82520425**, assuming no unrelated usage.
+The live billing page returned an authentication error, so this is accounting from
+the prior conservative balance, not a verified live balance. No further paid calls
+are scheduled. A comparable full four-call conservative allowance would exceed this
+estimate; restore billing visibility and replenish before such a campaign, without
+reducing test content or limits. No purchase or billing-setting change was made.
 
 ### Historical occurrence-specific passages and tier proposals v13
 
