@@ -6,6 +6,10 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
+For a zero-API-cost review of saved v14 answers, see [offline reference-location
+review](README-reference-coverage.md). It flags uncited source checklist passages
+without changing the reviewer, historical outcomes or semantic-approval boundaries.
+
 ### Default CLI: inline numbered support v14
 
 The default is `1.13.0-automated-research` / `governed-research-v14`, prepared by
