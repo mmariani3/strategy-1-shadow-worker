@@ -47,6 +47,7 @@ def evidence_message(packet, compact=True):
 
 
 def compact_request(request):
+    from research_support import VERSIONS as SUPPORT_VERSIONS
     from research_facts import VERSIONS as FACT_VERSIONS
     from research_citations import VERSIONS as SELECTION_VERSIONS
     from research_coverage import VERSIONS as COVERAGE_VERSIONS
@@ -58,12 +59,13 @@ def compact_request(request):
     versions = (request.get('implementation_version'), request.get('prompt_version'))
     if versions == LEGACY_VERSIONS:
         return False
-    if versions in ((VERSION, PROMPT_VERSION), FACT_VERSIONS, SELECTION_VERSIONS, COVERAGE_VERSIONS, SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS):
+    if versions in ((VERSION, PROMPT_VERSION), FACT_VERSIONS, SELECTION_VERSIONS, COVERAGE_VERSIONS, SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS):
         return True
     raise ReviewBlocked('UNSUPPORTED_REQUEST_VERSION')
 
 
 def request_evidence_message(packet, request):
+    from research_support import VERSIONS as SUPPORT_VERSIONS
     from research_subjects import VERSIONS as SUBJECT_VERSIONS
     from research_gaps import VERSIONS as GAP_VERSIONS
     from research_context import VERSIONS as CONTEXT_VERSIONS, context_evidence_message
@@ -73,7 +75,7 @@ def request_evidence_message(packet, request):
     from research_scoped import VERSIONS as SCOPED_VERSIONS, scoped_evidence_message
     from research_bounded import VERSIONS as BOUNDED_VERSIONS
     compact = compact_request(request)
-    if (request['implementation_version'], request['prompt_version']) in (CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS):
+    if (request['implementation_version'], request['prompt_version']) in (CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS):
         return context_evidence_message(packet)
     if (request['implementation_version'], request['prompt_version']) in (SCOPED_VERSIONS, BOUNDED_VERSIONS):
         return scoped_evidence_message(packet)
@@ -227,12 +229,17 @@ def parse_response(packet, request, response, reviewed_at):
     from research_context import VERSIONS as CONTEXT_VERSIONS, resolve_context_draft, validate_context_request
     from research_gaps import VERSIONS as GAP_VERSIONS, resolve_gap_draft, validate_gap_request
     from research_subjects import VERSIONS as SUBJECT_VERSIONS, resolve_subject_draft, validate_subject_request
+    from research_support import VERSIONS as SUPPORT_VERSIONS, resolve_support_draft, validate_support_request
     facts = None
     coverage = selection_audit = None
     binding = None
     versions = (request['implementation_version'], request['prompt_version'])
-    scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS)
-    if versions == SUBJECT_VERSIONS:
+    scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS)
+    if versions == SUPPORT_VERSIONS:
+        validate_support_request(packet, request)
+        resolved, facts, coverage, selection_audit, binding = resolve_support_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == SUBJECT_VERSIONS:
         validate_subject_request(packet, request)
         resolved, facts, coverage, selection_audit, binding = resolve_subject_draft(packet, texts[0])
         draft = ModelDraft.model_validate(resolved)

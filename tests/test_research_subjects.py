@@ -188,9 +188,9 @@ def test_durable_replay_and_original_v9_rejection(subject_case,masters):
     with pytest.raises(ReviewBlocked,match='READ_THROUGH_SUBJECT_REQUIRED'):parse_response(p,old_req,reply(old),NOW)
 
 
-def test_default_cli_prepares_without_provider(subject_case,masters,monkeypatch,capsys):
+def test_legacy_v10_cli_prepares_without_provider(subject_case,masters,monkeypatch,capsys):
     import run_research_reviewer as cli
-    assert cli.prepare_request is prepare_subject_request
+    monkeypatch.setattr(cli,'prepare_request',prepare_subject_request)
     p,_=subject_case;root=ledger_path().parent;pf=root/'p.json';mf=root/'m.json'
     pf.write_text(canonical(p),encoding='utf-8');mf.write_text(canonical(masters),encoding='utf-8')
     def forbidden(*a,**k):raise AssertionError('No credential/provider access')

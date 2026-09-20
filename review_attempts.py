@@ -99,6 +99,9 @@ def execute_once(ledger, packet, request, provider, clock=utc_now):
     from research_subjects import VERSIONS as SUBJECT_VERSIONS, validate_subject_request
     if (request['implementation_version'], request['prompt_version']) == SUBJECT_VERSIONS:
         validate_subject_request(packet, request)
+    from research_support import VERSIONS as SUPPORT_VERSIONS, validate_support_request
+    if (request['implementation_version'], request['prompt_version']) == SUPPORT_VERSIONS:
+        validate_support_request(packet, request)
     claimed = ledger.claim(request, clock())
     history = ledger.events(request['request_id'])
     if 'COMPLETED' in history:

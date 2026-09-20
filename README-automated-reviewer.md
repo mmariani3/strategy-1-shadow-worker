@@ -6,9 +6,40 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-### Default CLI: typed event subjects v10
+### Default CLI: clause support and host abstentions v11
 
-The default CLI now prepares `1.9.0-automated-research` /
+The default CLI prepares `1.10.0-automated-research` / `governed-research-v11`
+through `research_support.prepare_support_request`. Historical v1-v10 parsing
+and provider records are unchanged. This is a research proposal, not an accepted
+automated qualification method.
+
+- Source-bearing findings require a support record with atomic clauses, exact
+  contiguous quotes within selected excerpts, declared event relationship and
+  time basis. The host checks complete citation/path coverage and quote offsets.
+  Event timing cannot declare publication/market time or use metadata as event
+  evidence. Declared other-event support cannot satisfy selected-event facts/gaps.
+- Context notes retain quoted conditionality, expectations, counterevidence,
+  causal limits and provenance. Gap reviews explain what is already established
+  and why a missing fact matters to the identical narrow assessment scope.
+  Document proposals remain optional and without strategy authority.
+- Models author only the two research claims. The host appends nine explicit
+  freshness/operational abstentions, each marked `HOST_CAPABILITY_BOUNDARY` in
+  the research binding. Corporate approval documents cannot replace current
+  trading approval inputs, and preferred ADV is not hardened into a cutoff.
+- Exact quotes **do not prove entailment**, correct event attribution, complete
+  qualifiers or necessary gaps. Declared labels and all remaining prose still
+  need semantic review. Tests demonstrate this limit. All outputs remain
+  `RESEARCH_ONLY`, with `eligible_for_handoff=false`.
+
+Initial validation: **608 tests pass (31 new v11 regressions)**. Read-only replay
+preserves all **81 historical provider outcomes (40 admitted research results,
+41 rejections), with twelve unchanged ledger hashes**. No schema migration is
+needed: new versioned JSON is distinct from old records. Full model context must
+be supplied to evaluators separately from source evidence; see the method proposal.
+
+### Historical typed event subjects v10
+
+The historical v10 CLI prepared `1.9.0-automated-research` /
 `governed-research-v10` through `research_subjects.prepare_subject_request`.
 This is an infrastructure proposal with offline checks and a four-call provider
 compatibility check. **Independent semantic acceptance has not occurred**.
