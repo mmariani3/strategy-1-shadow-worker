@@ -38,6 +38,72 @@ Unicode/escaping, forbidden model quotes/offsets, missing/incorrect rule binding
 unsupported positive/negative tier approval, prompt/catalog tampering and replay.
 Even a semantically wrong mapping to a real rule remains explicitly unapproved.
 
+#### Completed v13 unused-source comparison
+
+Two previously undispatched source families, ABTS and CVI, were checked with both
+Mini and GPT-5.5. Selection excluded all prior request packets, substantive source
+IDs and exact document-body overlaps across fourteen ledgers. Full sources,
+complete non-source context, all masters, expectations, requests and runtime were
+frozen before dispatch. This was author-reviewed infrastructure evaluation, not
+independent semantic acceptance or Strategy #1 evidence.
+
+Runtime local commit `21e402d9f49afb60f26bc4b0617d636f16f74cb0`, GitHub commit
+`8eed03a743724c8fc6724cb23df97509d590c182`, matching tree
+`44146a74de466d6b65eae0cb1edbb92a4c7d03c6`. The final full test run passed **658**.
+Reference SHA-256: `80715eca302555c43c65b83a0ba17de8a0adf0effc96fbb7f4480b62e8722055`.
+
+| Case | Model | First blocking check | Usage-priced cost |
+| --- | --- | --- | ---: |
+| ABTS | Mini | Missing required support paths | $0.02795050 |
+| ABTS | GPT-5.5 | Unknown passage ID | $0.54311000 |
+| CVI | Mini | Missing required support paths | $0.02682600 |
+| CVI | GPT-5.5 | Parent-excerpt / passage coverage mismatch | $0.47253000 |
+
+All four provider responses completed and remained rejected. Total cost:
+**$1.07041650**, using the verified standard rates for
+[Mini](https://developers.openai.com/api/docs/models/gpt-5-mini) and
+[GPT-5.5](https://developers.openai.com/api/docs/models/gpt-5.5). Both models retained
+12,000 output tokens / 250,000 input bytes. No retries, response repair, output
+substitution, source truncation or runtime changes occurred during the campaign.
+
+Mini's two responses omitted five and four required support paths respectively.
+They also selected irrelevant passages and again treated missing primary documents
+or complete exhibits as necessary materiality facts despite captured information.
+For CVI, Mini selected the September article but put the July issuer-result date
+into selected-event timing and cited a CEO utilization passage lacking that date.
+
+GPT-5.5 / ABTS distinguished agreement dates, conditional later funding, the
+equity-line commitment, fee and expected dilution; full exhibits were optional.
+It left the tier unresolved instead of creating a corporate-action Tier B.
+It nevertheless used two unknown passage IDs (six selections), had additional
+parent-excerpt mismatches, and put publication timing into an event-timing support
+record. Some selected fragments omitted a qualifier present in adjacent source
+text. Its extracted context also omitted the note's default-plus-180-day conversion
+condition. Useful descriptive research is not complete validated support.
+
+GPT-5.5 / CVI kept the technical warning separate from older corporate results and
+other issuers and identified shared publisher origin. It proposed an explicitly
+unapproved Tier C with an actual governing-rule reference. Its 80 selected passage
+IDs existed, but its gap support did not cover every declared parent excerpt.
+The need for demonstrated market impact or underlying RSI rankings remains a
+reviewable claim, not a new Strategy prerequisite. Choosing the explicitly scoped
+warning as a research event is not itself an error or approval of an RSI strategy.
+
+In total **253 of 259 passage selections** referenced existing exact locations.
+These counts include repeats and **are not factual-accuracy scores**. The contract
+eliminates model-authored quotation text but still burdens the model with long IDs,
+redundant parent-excerpt references and adjacent-fragment selection. Neither model
+is accepted for unattended qualification. Future work should simplify that binding
+contract before another paid campaign, without weakening source checks.
+
+Read-only final replay preserved all **93 outcomes: 41 admitted research results
+and 52 rejections**, with fifteen unchanged ledger hashes. New ledger SHA-256:
+`81796fca87e1ba0cf1f074aad191ee323bda5525347b9a309a9d3eb03505634f`.
+The private package includes all four raw responses, source-linked author findings,
+full inputs and structural diagnostics. No schema migration or historical relabeling
+is needed. No Journal, schedule, broker or production configuration was changed;
+live runtime configuration was not reverified. The PR remains a draft, unmerged.
+
 ### Historical v12: readable clause support
 
 The historical version is `1.11.0-automated-research` / `governed-research-v12`, prepared
