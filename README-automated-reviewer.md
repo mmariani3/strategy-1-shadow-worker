@@ -35,6 +35,56 @@ that is author review, not independent acceptance. No model is approved for
 unattended qualification. A new-version check of these cases is development
 compatibility, not a fresh or independent holdout.
 
+#### v12 development compatibility results
+
+Four actual-CLI calls on frozen runtime tree
+`47dfbc91c09cb02a938a7ee11028d68e67f47b95`, full masters/packets and the unchanged
+12,000-output-token / 250,000-input-byte allowances, no retries or response repairs:
+
+| Case | Model | Outcome | Usage-priced cost |
+| --- | --- | --- | ---: |
+| VWAV | Mini | Blocked: readable quote mismatch | $0.02603175 |
+| VWAV | GPT-5.5 | Structurally admitted research draft; exact replay | $0.39874500 |
+| PH | Mini | Blocked: readable quote mismatch | $0.02278050 |
+| PH | GPT-5.5 | Blocked: quotation occurs twice within its excerpt | $0.34471000 |
+
+All four provider responses completed. v12 cost **$0.79226725**; both campaigns
+cost **$1.56419750**. Rates were reread from the official
+[Mini](https://developers.openai.com/api/docs/models/gpt-5-mini) and
+[GPT-5.5](https://developers.openai.com/api/docs/models/gpt-5.5) pages before calls.
+There were 99 individual quote selections; 90 located a unique readable span.
+This location count is not an accuracy or semantic-acceptance score. In particular,
+GPT-5.5's blocked PH quote is real, but its repeated occurrence makes the offset
+ambiguous. It was not treated as fabrication or silently repaired.
+
+Author source assessment against the reference frozen before the original v11
+dispatch found:
+
+- GPT-5.5 / VWAV preserves filing, prior approvals and future effect/trading dates;
+  treats exhibits as optional context; and retains no-assurance/risk language.
+  Its proposed **Tier B-type corporate-action classification is not established
+  by an explicit governing Tier B category**. Furnished/not-filed status also
+  should not be used as the reason a source is absent or not independent.
+- Mini still inserts ellipses or changes punctuation in exact quotations,
+  overstates document prerequisites, changes gap assessment scope, and conflates
+  verification with narrow materiality. Its PH Form 4 document route is not
+  established by the captured article or masters.
+- GPT-5.5 / PH separates trade/publication dates, keeps materiality and verification
+  unresolved and preserves conditional attention. The necessity of additional
+  context remains reviewable; observed repricing/attention cannot become a new
+  universal prerequisite for a plausible catalyst.
+
+These are selected implementation-author findings, not exhaustive independent
+semantic validation. v12 cases are reused development cases. **Neither model is
+accepted for unattended qualification**, including the one structurally admitted
+research draft. No output is eligible for handoff.
+
+Final read-only replay preserved **89 provider outcomes (41 admitted research
+results, 48 rejections), with all fourteen ledger hashes unchanged**. The v12
+ledger SHA-256 is `e4b2f9a0f7acf70fad16a07ff9d17130f46bf778a3351646eb68e01f9888bd68`.
+The full suite remains **624 passing tests**. No production runtime, master,
+Journal, schedule or execution setting changed; live runtime was not reverified.
+
 ### Clause support and host abstentions introduced in v11
 
 The historical v11 CLI prepared `1.10.0-automated-research` / `governed-research-v11`
