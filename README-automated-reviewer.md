@@ -6,9 +6,32 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-### Default CLI: occurrence-specific passages and tier proposals v13
+### Default CLI: inline numbered support v14
 
-The default is `1.12.0-automated-research` / `governed-research-v13`, prepared by
+The default is `1.13.0-automated-research` / `governed-research-v14`, prepared by
+`research_linked.prepare_linked_request`. Each finding contains its own support
+clauses with bounded integer passage numbers. The host derives stable passage IDs,
+parent excerpt references and support paths from those selections. Gap scope/index
+and rule references are also derived. The model no longer copies long hashes or
+maintains a second, potentially inconsistent parent-reference list. Invalid numbers,
+duplicates within a clause, forbidden legacy fields, unsupported timing/subject
+claims, altered requests and automatic tier approvals still fail closed.
+
+The adapter uses the frozen v13 checks on a deterministic internal representation
+of **new v14 responses only**. It does not convert historical responses. The saved
+v1-v13 outcomes and parsers remain intact. Full source/master/context content and
+original occurrence offsets are retained. Valid references still cannot establish
+entailment, completeness, necessary gaps or appropriate tier mapping. All proposals
+remain unapproved and all results remain research-only, ineligible for handoff.
+
+Offline verification: **688 tests passed**, including 30 new regressions; all 93
+saved provider outcomes replay unchanged across fifteen unchanged ledgers. A paired
+development comparison on the already-used ABTS/CVI documents is being prepared;
+it is not a held-out accuracy test, independent review or Strategy #1 evidence.
+
+### Historical occurrence-specific passages and tier proposals v13
+
+The preserved v13 implementation is `1.12.0-automated-research` / `governed-research-v13`, prepared by
 `research_passages.prepare_passage_request`. Models select fixed passage IDs;
 the host copies exact text and occurrence-specific source offsets. Repeated text
 at different locations has different IDs. No quotation retyping, ellipsis repair,

@@ -47,6 +47,9 @@ def evidence_message(packet, compact=True):
 
 
 def compact_request(request):
+    from research_linked import VERSIONS as LINKED_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == LINKED_VERSIONS:
+        return True
     from research_passages import VERSIONS as PASSAGE_VERSIONS
     if (request.get('implementation_version'), request.get('prompt_version')) == PASSAGE_VERSIONS:
         return True
@@ -69,6 +72,9 @@ def compact_request(request):
 
 
 def request_evidence_message(packet, request):
+    from research_linked import VERSIONS as LINKED_VERSIONS, linked_evidence_message
+    if (request.get('implementation_version'), request.get('prompt_version')) == LINKED_VERSIONS:
+        return linked_evidence_message(packet)
     from research_passages import VERSIONS as PASSAGE_VERSIONS, passage_evidence_message
     if (request.get('implementation_version'), request.get('prompt_version')) == PASSAGE_VERSIONS:
         return passage_evidence_message(packet)
@@ -244,8 +250,12 @@ def parse_response(packet, request, response, reviewed_at):
     binding = None
     versions = (request['implementation_version'], request['prompt_version'])
     from research_passages import VERSIONS as PASSAGE_VERSIONS, resolve_passage_draft
-    scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS, READABLE_VERSIONS, PASSAGE_VERSIONS)
-    if versions == PASSAGE_VERSIONS:
+    from research_linked import VERSIONS as LINKED_VERSIONS, resolve_linked_draft
+    scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS, READABLE_VERSIONS, PASSAGE_VERSIONS, LINKED_VERSIONS)
+    if versions == LINKED_VERSIONS:
+        resolved, facts, coverage, selection_audit, binding = resolve_linked_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == PASSAGE_VERSIONS:
         resolved, facts, coverage, selection_audit, binding = resolve_passage_draft(packet, request, texts[0])
         draft = ModelDraft.model_validate(resolved)
     elif versions == READABLE_VERSIONS:
