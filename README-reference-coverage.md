@@ -1,9 +1,11 @@
 # Offline reference-location review
 
-`research_reference_coverage.py` compares a saved v14 draft's passage selections
+`research_reference_coverage.py` compares a saved v14 or v15 draft's passage selections
 with an externally supplied, source-anchored checklist. It makes **zero model calls**
 and never reads credentials, changes the saved answer, changes its admission outcome,
-qualifies a candidate or writes to trading services. The default reviewer remains v14.
+qualifies a candidate or writes to trading services. The [default reviewer is now
+v15](README-economic-review.md); this audit supports both versions. V14 reports keep
+their original audit version and exact output; v15 reports use audit version 1.1.0.
 
 This is an evaluation sidecar, not an automatic completeness or accuracy judge.
 Its name and statuses describe **locations**, not economic meaning.

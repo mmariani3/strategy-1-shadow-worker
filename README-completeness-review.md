@@ -84,6 +84,10 @@ provider response; its caller must preserve and verify that provenance.
 
 ## Verification and next boundary
 
+The [v15 instruction revision](README-economic-review.md) now addresses these
+findings. This review process supports v14/v15 through the versioned location audit.
+The recorded development judgments above remain tied to their original v14 answers.
+
 Twenty new regressions cover default unresolved templates, valid citations with
 false prose, omission/citation distinctions, pending issues retained after revision
 flags, optional context, binding/timestamp failures, immutable input files and no

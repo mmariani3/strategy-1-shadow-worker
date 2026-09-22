@@ -1,6 +1,6 @@
 """Offline location coverage against supplied reference anchors, never semantic approval.
 
-Read-only sidecar for v14 drafts, including rejected drafts. It does not repair,
+Read-only sidecar for v14/v15 drafts, including rejected drafts. It does not repair,
 reparse for admission, call a model, discover required facts, or modify a request.
 """
 import json
@@ -45,11 +45,19 @@ def audit_reference_coverage(packet, request, draft, reference):
     support false prose; an unselected span can be paraphrased without a citation.
     Neither status admits, rejects or changes the saved research result.
     """
-    if (request.get('implementation_version'), request.get('prompt_version')) != VERSIONS:
+    from research_economic import VERSIONS as ECONOMIC_VERSIONS, validate_economic_request
+    versions = (request.get('implementation_version'), request.get('prompt_version'))
+    if versions == ECONOMIC_VERSIONS:
+        validate_economic_request(packet, request)
+        audit_version = '1.1.0-reference-location-audit'
+    elif versions == VERSIONS:
+        validate_linked_request(packet, request)
+        audit_version = VERSION  # Exact historical output/digest remains reproducible.
+    else:
         raise ValueError('REFERENCE_AUDIT_REQUIRES_V14')
-    if request['request_id'] != digest(dict(version=VERSIONS[0], prompt_version=VERSIONS[1], body=request['body'])):
+    if request['request_id'] != digest(dict(version=versions[0], prompt_version=versions[1], body=request['body'])):
         raise ValueError('REQUEST_DIGEST_MISMATCH')
-    evidence_message(packet); validate_linked_request(packet, request)
+    evidence_message(packet)
     LinkedDraft.model_validate(draft)
     d = draft  # Inspect original strings, not whitespace-normalized model_dump values.
     if (d['target']['symbol'] != packet['symbol'] or d['materiality_coverage']['subject_symbol'] != packet['symbol']
@@ -111,7 +119,7 @@ def audit_reference_coverage(packet, request, draft, reference):
             selected_encoded_characters=selected_chars, anchor_encoded_characters=len(quote),
             selections=[{k:r[k] for k in ('number','passage_id','model_path','model_statement','start','end')} for r in chosen],
             semantic_coverage='NOT_ESTABLISHED'))
-    result = dict(implementation_version=VERSION, packet_id=packet['packet_id'], trace=packet['trace'],
+    result = dict(implementation_version=audit_version, packet_id=packet['packet_id'], trace=packet['trace'],
         request_id=request['request_id'], draft_digest=digest(draft), reference_digest=digest(reference),
         reference_provenance={k:reference[k] for k in ('assessor','at','independent')},
         reference_scope='SUPPLIED_ANCHORS_ONLY_NOT_COMPLETE_SOURCE_INVENTORY',

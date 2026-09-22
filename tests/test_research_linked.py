@@ -165,7 +165,8 @@ def test_rule_binding_is_not_semantic_acceptance(linked_case):
 
 def test_default_cli_stays_prepare_only(linked_case, monkeypatch, capsys):
     import run_research_reviewer as cli
-    assert cli.prepare_request is prepare_linked_request
+    # Preserve the historical v14 CLI regression under its actual prompt version.
+    monkeypatch.setattr(cli, 'prepare_request', prepare_linked_request)
     p, _, m = linked_case; root = ledger_path().parent
     (root/'p.json').write_text(canonical(p), encoding='utf-8'); (root/'m.json').write_text(canonical(m), encoding='utf-8')
     def forbidden(*a, **k): raise AssertionError('No provider or credentials')

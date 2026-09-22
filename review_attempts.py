@@ -107,6 +107,9 @@ def execute_once(ledger, packet, request, provider, clock=utc_now):
         validate_readable_request(packet, request)
     from research_passages import VERSIONS as PASSAGE_VERSIONS, validate_passage_request
     from research_linked import VERSIONS as LINKED_VERSIONS, validate_linked_request
+    from research_economic import VERSIONS as ECONOMIC_VERSIONS, validate_economic_request
+    if (request['implementation_version'], request['prompt_version']) == ECONOMIC_VERSIONS:
+        validate_economic_request(packet, request)
     if (request['implementation_version'], request['prompt_version']) == LINKED_VERSIONS:
         validate_linked_request(packet, request)
     if (request['implementation_version'], request['prompt_version']) == PASSAGE_VERSIONS:

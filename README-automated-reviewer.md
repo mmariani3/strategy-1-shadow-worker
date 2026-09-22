@@ -6,13 +6,22 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-For a zero-API-cost review of saved v14 answers, see [offline reference-location
+For a zero-API-cost review of saved v14/v15 answers, see [offline reference-location
 review](README-reference-coverage.md). It flags uncited source checklist passages
 without changing the reviewer, historical outcomes or semantic-approval boundaries.
 
-### Default CLI: inline numbered support v14
+### Default CLI: economic extraction v15
 
-The default is `1.13.0-automated-research` / `governed-research-v14`, prepared by
+The default is `1.14.0-automated-research` / `governed-research-v15`, prepared by
+`research_economic.prepare_economic_request`. It adds scope-specific source/prose
+checks for economic terms, fees, conditions, timing, counterevidence and unsupported
+prerequisites. The existing inline-support schema and frozen v14 parser remain in
+use. See [v15 changes, tests and limitations](README-economic-review.md).
+This revision has passed offline checks only; improved model output is unverified.
+
+### Preserved inline numbered support v14
+
+The prior contract is `1.13.0-automated-research` / `governed-research-v14`, prepared by
 `research_linked.prepare_linked_request`. Each finding contains its own support
 clauses with bounded integer passage numbers. The host derives stable passage IDs,
 parent excerpt references and support paths from those selections. Gap scope/index
