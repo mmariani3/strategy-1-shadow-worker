@@ -1,5 +1,10 @@
 # Tier references and readable source review — v19
 
+The subsequent [provider comparison](README-tier-comparison.md) tested this
+unchanged runtime. Both Fubo answers passed the schema/parser; source-content
+defects remain. KDP was blocked by the full-input limit. The offline record below
+retains its original scope and results.
+
 The v18 provider comparison rejected one answer because it selected general
 catalyst guidance alongside a tier-specific rule. New v19 requests restrict each
 proposed tier to catalog rows carrying that same tier label. A separate local HTML
