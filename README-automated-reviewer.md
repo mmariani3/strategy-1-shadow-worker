@@ -1051,3 +1051,9 @@ See [v17 provider comparison](README-scope-comparison.md): four calls cost
 $1.177576; both GPT-5.5 answers passed technical validation and both Mini answers
 were rejected for other contract errors. One admitted answer still omitted
 source terms. No independent semantic acceptance or unattended qualification.
+
+## v18 provider comparison
+
+The [v18 paired comparison](README-typed-comparison.md) records four new historical
+infrastructure answers, their original outcomes, attributed source review and cost.
+It does not approve either model for unattended qualification.

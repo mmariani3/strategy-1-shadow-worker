@@ -1,5 +1,9 @@
 # Constrained research labels and offline omission review — v18
 
+The subsequent [four-call provider comparison](README-typed-comparison.md) tested
+this unchanged runtime. All new field shapes passed; one separate tier-mapping
+rejection and content-review defects remain. The offline results below are preserved.
+
 The v17 comparison found two Mini contract failures and economically relevant
 omissions in an admitted GPT-5.5 answer. This change moves existing field
 relationships into the provider schema and adds a separate source-location review
