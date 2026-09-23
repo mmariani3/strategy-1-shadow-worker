@@ -1,5 +1,10 @@
 # Single scope and source wording — research contract v17
 
+The subsequent [four-call provider comparison](README-scope-comparison.md) tested
+this unchanged runtime on fresh historical documents. All answers used one scope;
+two passed technical validation, but only one had no material defect identified
+in the finite author checklist. Unattended research remains unaccepted.
+
 The v16 comparison rejected both Mini responses because two independently written
 scope strings differed. An admitted GPT-5.5 response also shortened a voting
 condition despite citing the source. New requests use

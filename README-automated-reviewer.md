@@ -1041,3 +1041,9 @@ Run `python -m pytest -q`. Tests use isolated fixtures and mocked provider respo
 A live API test still requires a securely configured key, selected model and bounded approved spend. Independent review, current measurement/retrieval adapters, accepted live freshness/review policy, hosted credentials/storage and notification delivery remain outstanding. No production configuration or governing master is changed here.
 
 API contract: [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs). Checked September 18, 2026. Runtime compatibility must still be verified against the selected accessible model.
+## Latest provider comparison
+
+See [v17 provider comparison](README-scope-comparison.md): four calls cost
+$1.177576; both GPT-5.5 answers passed technical validation and both Mini answers
+were rejected for other contract errors. One admitted answer still omitted
+source terms. No independent semantic acceptance or unattended qualification.
