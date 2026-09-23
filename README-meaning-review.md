@@ -1,5 +1,10 @@
 # Review individual rules, timing and source qualifications
 
+**Subsequent provider evidence:** the [v20 fresh-source comparison](README-semantic-comparison.md)
+now records two complete calls costing $0.44708250. Mini still requires revisions;
+GPT-5.5 has two unresolved structured entries. The implementation/offline results
+below describe the preceding step, when no v20 provider calls had been made.
+
 The v19 Fubo comparison produced structurally valid drafts with unsupported rule
 references, a commitment/funding timing error, an inferred loan condition and
 omitted risks. The new offline meaning review records each of those questions
