@@ -104,6 +104,7 @@ def test_changed_request_rejected_before_reservation(linked_case,field):
 
 def test_exact_size_full_inputs_replay_and_default_cli(linked_case,monkeypatch,capsys):
     import run_research_reviewer as cli
+    monkeypatch.setattr(cli, 'prepare_request', prepare_tier_request)  # Historical v19 fixture.
     p,r,d,_,m=case(linked_case);size=len(canonical(r['body']).encode());calls=[]
     assert prepare_tier_request(p,m,'offline-fixture',12000,size,NOW)==r
     with pytest.raises(ValueError,match='INPUT_LIMIT_EXCEEDED_NO_TRUNCATION'):prepare_tier_request(p,m,'offline-fixture',12000,size-1,NOW)

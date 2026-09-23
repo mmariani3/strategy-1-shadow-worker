@@ -1,5 +1,9 @@
 # v19 provider comparison — September 22, 2026 Pacific
 
+Subsequent [offline meaning-review controls](README-meaning-review.md) record each
+rule, timing finding, economic term and source anchor against these unchanged
+answers. The original comparison below remains historical evidence.
+
 **Both models accepted the new schema and produced technically valid research
 drafts. Both still need source-content revisions in the implementation author's
 review.** Matching a rule's tier label does not establish that the rule applies.

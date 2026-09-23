@@ -1,5 +1,8 @@
 # Tier references and readable source review — v19
 
+See the subsequent [individual meaning-review workflow](README-meaning-review.md)
+for attributed checks of rule support, timing, economic terms and source risks.
+
 The subsequent [provider comparison](README-tier-comparison.md) tested this
 unchanged runtime. Both Fubo answers passed the schema/parser; source-content
 defects remain. KDP was blocked by the full-input limit. The offline record below

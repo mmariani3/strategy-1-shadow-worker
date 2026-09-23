@@ -47,6 +47,9 @@ def evidence_message(packet, compact=True):
 
 
 def compact_request(request):
+    from research_semantics import VERSIONS as SEMANTIC_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == SEMANTIC_VERSIONS:
+        return True
     from research_tiers import VERSIONS as TIER_VERSIONS
     from research_typed import VERSIONS as TYPED_VERSIONS
     if (request.get('implementation_version'), request.get('prompt_version')) in (TYPED_VERSIONS, TIER_VERSIONS):
@@ -85,6 +88,10 @@ def compact_request(request):
 
 
 def request_evidence_message(packet, request):
+    from research_semantics import VERSIONS as SEMANTIC_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == SEMANTIC_VERSIONS:
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
     from research_tiers import VERSIONS as TIER_VERSIONS
     from research_typed import VERSIONS as TYPED_VERSIONS
     if (request.get('implementation_version'), request.get('prompt_version')) in (TYPED_VERSIONS, TIER_VERSIONS):
@@ -286,8 +293,12 @@ def parse_response(packet, request, response, reviewed_at):
     from research_scope import VERSIONS as SINGLE_SCOPE_VERSIONS, resolve_scope_draft
     from research_typed import VERSIONS as TYPED_VERSIONS, resolve_typed_draft
     from research_tiers import VERSIONS as TIER_VERSIONS, resolve_tier_draft
-    scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS, READABLE_VERSIONS, PASSAGE_VERSIONS, LINKED_VERSIONS, ECONOMIC_VERSIONS, TERMS_VERSIONS, SINGLE_SCOPE_VERSIONS, TYPED_VERSIONS, TIER_VERSIONS)
-    if versions == TIER_VERSIONS:
+    from research_semantics import VERSIONS as SEMANTIC_VERSIONS, resolve_semantic_draft
+    scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS, READABLE_VERSIONS, PASSAGE_VERSIONS, LINKED_VERSIONS, ECONOMIC_VERSIONS, TERMS_VERSIONS, SINGLE_SCOPE_VERSIONS, TYPED_VERSIONS, TIER_VERSIONS, SEMANTIC_VERSIONS)
+    if versions == SEMANTIC_VERSIONS:
+        resolved, facts, coverage, selection_audit, binding = resolve_semantic_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == TIER_VERSIONS:
         resolved, facts, coverage, selection_audit, binding = resolve_tier_draft(packet, request, texts[0])
         draft = ModelDraft.model_validate(resolved)
     elif versions == TYPED_VERSIONS:
@@ -386,7 +397,7 @@ def parse_response(packet, request, response, reviewed_at):
         result['citation_selection_audit'] = selection_audit
     if binding is not None:
         result['research_binding'] = binding
-        if versions in (TERMS_VERSIONS, SINGLE_SCOPE_VERSIONS, TYPED_VERSIONS, TIER_VERSIONS):
+        if versions in (TERMS_VERSIONS, SINGLE_SCOPE_VERSIONS, TYPED_VERSIONS, TIER_VERSIONS, SEMANTIC_VERSIONS):
             # Required economic presentation; the short research narrative alone
             # is not the full result. Retain even unresolved inventory states.
             result['economic_summary'] = deepcopy(binding['economic_inventory']['summary'])

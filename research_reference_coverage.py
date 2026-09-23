@@ -51,7 +51,11 @@ def audit_reference_coverage(packet, request, draft, reference):
     from research_typed import VERSIONS as TYPED_VERSIONS, validate_typed_request
     versions = (request.get('implementation_version'), request.get('prompt_version'))
     from research_tiers import VERSIONS as TIER_VERSIONS, validate_tier_request
-    if versions == TIER_VERSIONS:
+    from research_semantics import VERSIONS as SEMANTIC_VERSIONS, validate_semantic_request
+    if versions == SEMANTIC_VERSIONS:
+        validate_semantic_request(packet, request)
+        audit_version = '1.6.0-reference-location-audit'
+    elif versions == TIER_VERSIONS:
         validate_tier_request(packet, request)
         audit_version = '1.5.0-reference-location-audit'
     elif versions == TYPED_VERSIONS:
@@ -74,7 +78,7 @@ def audit_reference_coverage(packet, request, draft, reference):
     if request['request_id'] != digest(dict(version=versions[0], prompt_version=versions[1], body=request['body'])):
         raise ValueError('REQUEST_DIGEST_MISMATCH')
     evidence_message(packet)
-    if versions in (SINGLE_SCOPE_VERSIONS, TYPED_VERSIONS, TIER_VERSIONS):
+    if versions in (SINGLE_SCOPE_VERSIONS, TYPED_VERSIONS, TIER_VERSIONS, SEMANTIC_VERSIONS):
         d = project_draft(draft)['research']
     elif versions == TERMS_VERSIONS:
         TermsDraft.model_validate(draft)
