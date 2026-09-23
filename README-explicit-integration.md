@@ -68,7 +68,13 @@ This export is a source-review checklist, not recorded adjudication. It does not
 automatically approve assertions or establish independent review. The existing
 v20 attributed-assessment recorder is not advertised as accepting v21 wrappers.
 Valid citations and filled fields still permit false, generic or incomplete prose.
-Provider schema acceptance and real v21 answer quality remain unverified.
+The offline integration milestone did not verify provider schema acceptance or
+real v21 answer quality.
+
+The subsequent [September 23 paired provider retest](README-explicit-comparison.md)
+records actual schema acceptance, one Mini rejection and one GPT-5.5 research
+draft, with attributed source checks and explicit limits. General reliability
+and independent acceptance remain unverified.
 
 No API calls, keys, billing settings, production services, Journal entries or
 synced sources are needed for this offline step. No Strategy #1 v0.3 or Experiment
