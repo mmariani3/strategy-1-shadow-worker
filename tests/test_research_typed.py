@@ -184,8 +184,9 @@ def test_evidence_gap_cannot_be_tagged_as_unrelated_context():
     with pytest.raises(ValueError):TypedGap.model_validate(data)
 
 
-def test_default_cli_prepares_v18_without_provider(linked_case,monkeypatch,capsys):
+def test_historical_cli_prepares_v18_without_provider(linked_case,monkeypatch,capsys):
     import run_research_reviewer as cli
+    monkeypatch.setattr(cli, "prepare_request", prepare_typed_request)
     assert cli.prepare_request is prepare_typed_request
     p,_,_,_,m=typed_case(linked_case); root=ledger_path().parent
     for name,value in [('p',p),('m',m)]: (root/(name+'.json')).write_text(canonical(value),encoding='utf-8')

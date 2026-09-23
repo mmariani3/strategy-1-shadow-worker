@@ -1,7 +1,7 @@
 # Automated research reviewer
 
-The default request contract is now [v18: constrained labels and offline omission
-review](README-typed-research.md). This update was tested offline only; historical
+The default request contract is now [v19: tier references and readable source
+review](README-tier-review.md). This update was tested offline only; historical
 provider comparisons below retain their original versions and outcomes.
 
 This implements an opt-in OpenAI Responses API client for the packets in [PR #5](https://github.com/mmariani3/strategy-1-shadow-worker/pull/5). It can request a substantive, source-cited research assessment and compare its claims with a separately supplied reference. **It cannot qualify candidates, refresh live approvals, confirm triggers, establish experimental observations or enable execution.**
@@ -14,9 +14,9 @@ For a zero-API-cost review of saved v14–v17 answers, see [offline reference-lo
 review](README-reference-coverage.md). It flags uncited source checklist passages
 without changing the reviewer, historical outcomes or semantic-approval boundaries.
 
-### Default CLI: one scope and source wording v17
+### Historical v17 CLI: one scope and source wording
 
-The default is `1.16.0-automated-research` / `governed-research-v17`, prepared by
+The historical v17 default was `1.16.0-automated-research` / `governed-research-v17`, prepared by
 `research_scope.prepare_scope_request`. One root scope replaces duplicate fields.
 The mandatory economic summary retains each entry and adds its full selected
 source passages. Consumers must present source wording with model statements.

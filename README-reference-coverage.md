@@ -1,10 +1,10 @@
 # Offline reference-location review
 
-`research_reference_coverage.py` compares a saved v14–v18 draft's passage selections
+`research_reference_coverage.py` compares a saved v14–v19 draft's passage selections
 with an externally supplied, source-anchored checklist. It makes **zero model calls**
 and never reads credentials, changes the saved answer, changes its admission outcome,
 qualifies a candidate or writes to trading services. The [default reviewer is now
-v18](README-typed-research.md). V14 reports keep their original audit version and
+v19](README-tier-review.md). V14 reports keep their original audit version and
 exact output; v15 reports use version 1.1.0, and v16 reports use 1.2.0. V16 audits
 inspect the original envelope, including inventory and nested research selections.
 Paths retain their `economic_inventory` or `research` prefixes.
@@ -14,6 +14,10 @@ Historical v14–v16 audits and digests remain unchanged.
 V18 uses audit version 1.4.0; v17 outputs also remain unchanged. The separate
 `research_omissions.py` report retains full substantive text and exposes uncited,
 narrative-only and unindexed source locations for attributed review.
+
+V19 uses audit version 1.5.0 and retains original root/nested paths. V18 outputs
+remain unchanged. `research_review_view.py` renders verified omission reports into
+local HTML with source/prose columns, navigation and full evidence retention.
 
 This is an evaluation sidecar, not an automatic completeness or accuracy judge.
 Its name and statuses describe **locations**, not economic meaning.

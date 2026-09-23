@@ -1,5 +1,8 @@
 # Constrained research labels and offline omission review — v18
 
+Historical v18 record. The current default is [v19](README-tier-review.md);
+the results and version-specific behavior below are retained as originally tested.
+
 The subsequent [four-call provider comparison](README-typed-comparison.md) tested
 this unchanged runtime. All new field shapes passed; one separate tier-mapping
 rejection and content-review defects remain. The offline results below are preserved.

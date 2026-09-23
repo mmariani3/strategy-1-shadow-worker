@@ -51,9 +51,9 @@ def draft_value(draft, path):
 def prepare_checklist(packet, request, draft, reference):
     audit = audit_reference_coverage(packet, request, draft, reference)
     ids = [r['anchor']['id'] for r in audit['rows']]
-    prefix = ['research'] if request['prompt_version'] in ('governed-research-v16','governed-research-v17','governed-research-v18') else []
+    prefix = ['research'] if request['prompt_version'] in ('governed-research-v16','governed-research-v17','governed-research-v18','governed-research-v19') else []
     coverage = draft_value(draft, prefix + ['materiality_coverage'])
-    scope = draft['assessment_scope'] if request['prompt_version'] in ('governed-research-v17','governed-research-v18') else coverage['assessment_scope']
+    scope = draft['assessment_scope'] if request['prompt_version'] in ('governed-research-v17','governed-research-v18','governed-research-v19') else coverage['assessment_scope']
     return dict(audit_id=audit['audit_id'],scope=scope,
         assessor_id='UNASSIGNED',assessor_kind='AI_OTHER',reviewed_at='',
         limitations=['Template only; judgments and assessor attribution must be supplied after source/prose review.'],
@@ -66,11 +66,11 @@ def record_completeness_review(packet, request, draft, reference, assessment, no
     audit = audit_reference_coverage(packet, request, draft, reference)
     review = Assessment.model_validate(assessment)
     if review.audit_id != audit['audit_id']: raise ValueError('COMPLETENESS_AUDIT_MISMATCH')
-    coverage = draft_value(draft, (['research'] if request['prompt_version'] in ('governed-research-v16','governed-research-v17','governed-research-v18') else []) + ['materiality_coverage'])
-    scope = draft['assessment_scope'] if request['prompt_version'] in ('governed-research-v17','governed-research-v18') else coverage['assessment_scope']
+    coverage = draft_value(draft, (['research'] if request['prompt_version'] in ('governed-research-v16','governed-research-v17','governed-research-v18','governed-research-v19') else []) + ['materiality_coverage'])
+    scope = draft['assessment_scope'] if request['prompt_version'] in ('governed-research-v17','governed-research-v18','governed-research-v19') else coverage['assessment_scope']
     # V17's exact root string is preserved in its source summary. Compare the
     # original assessment string, not Pydantic's whitespace-normalized view.
-    supplied_scope = assessment['scope'] if request['prompt_version'] in ('governed-research-v17','governed-research-v18') else review.scope
+    supplied_scope = assessment['scope'] if request['prompt_version'] in ('governed-research-v17','governed-research-v18','governed-research-v19') else review.scope
     if supplied_scope != scope:
         raise ValueError('COMPLETENESS_SCOPE_MISMATCH')
     if review.assessor_id == 'UNASSIGNED': raise ValueError('ASSESSOR_REQUIRED')
