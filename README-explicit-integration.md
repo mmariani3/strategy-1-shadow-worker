@@ -81,6 +81,10 @@ GPT-5.5 regulatory-announcement example. Its central account is supported, with
 condition-field and mixed-time metadata findings retained against the unchanged
 answer. Structural admission remains distinct from source correctness.
 
+The subsequent [condition and forecast review](README-field-review.md) adds an
+opt-in v22 instruction route and complete attributed field-review records while
+preserving this v21 implementation and its historical outputs.
+
 No API calls, keys, billing settings, production services, Journal entries or
 synced sources are needed for this offline step. No Strategy #1 v0.3 or Experiment
 Plan v0.5 methodology, risk limits or eligibility changes. SHADOW and disabled

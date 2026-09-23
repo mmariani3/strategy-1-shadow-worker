@@ -82,6 +82,9 @@ class AttemptLedger:
 
 
 def execute_once(ledger, packet, request, provider, clock=utc_now):
+    from research_fields import VERSIONS as FIELD_VERSIONS, validate_field_request
+    if (request.get('implementation_version'), request.get('prompt_version')) == FIELD_VERSIONS:
+        validate_field_request(packet, request)
     from research_explicit import VERSIONS as EXPLICIT_VERSIONS, validate_integrated_request
     if (request.get('implementation_version'), request.get('prompt_version')) == EXPLICIT_VERSIONS:
         validate_integrated_request(packet, request)
