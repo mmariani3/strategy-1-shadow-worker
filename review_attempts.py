@@ -82,6 +82,9 @@ class AttemptLedger:
 
 
 def execute_once(ledger, packet, request, provider, clock=utc_now):
+    from research_roles import VERSIONS as ROLE_VERSIONS, validate_role_request
+    if (request.get('implementation_version'), request.get('prompt_version')) == ROLE_VERSIONS:
+        validate_role_request(packet, request)
     from research_fields import VERSIONS as FIELD_VERSIONS, validate_field_request
     if (request.get('implementation_version'), request.get('prompt_version')) == FIELD_VERSIONS:
         validate_field_request(packet, request)

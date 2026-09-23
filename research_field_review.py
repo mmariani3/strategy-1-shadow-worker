@@ -16,22 +16,43 @@ VERSION = '1.0.0-condition-timing-review'
 
 
 def field_review(packet, request, response, received_at, reference):
+    from research_roles import VERSIONS as ROLE_VERSIONS, validate_role_request, role_checklist
     versions = (request.get('implementation_version'), request.get('prompt_version'))
-    if versions == VERSIONS:
+    projected_response = response
+    if versions == ROLE_VERSIONS:
+        _, field_request = validate_role_request(packet, request)
+        _, previous = validate_field_request(packet, field_request)
+        # Projection is for the frozen v21 exporter only. The report below
+        # restores the exact original text, wrapper and provider envelope.
+        projected_response = deepcopy(response)
+        for message in projected_response.get('output', []):
+            if message.get('type') == 'message':
+                for part in message.get('content', []):
+                    if part.get('type') == 'output_text':
+                        raw = json.loads(part['text'])
+                        part['text'] = canonical({k:v for k,v in raw.items() if k != 'meaning_contract'})
+    elif versions == VERSIONS:
         _, previous = validate_field_request(packet, request)
     elif versions == PREVIOUS:
         previous = request
-    else: raise ReviewBlocked('FIELD_REVIEW_REQUIRES_V21_OR_V22')
+    else: raise ReviewBlocked('FIELD_REVIEW_REQUIRES_V21_V22_OR_V23')
     result = parse_response(packet, request, response, received_at)
     # The v21 projection is only an internal export adapter. Replace every
     # request-specific identity and contract before exposing the final report.
-    report = explicit_review(packet, previous, response, received_at, reference)
+    report = explicit_review(packet, previous, projected_response, received_at, reference)
     report.update(implementation_version=VERSION, request_id=request['request_id'],
         original_versions=dict(implementation=versions[0], prompt=versions[1]),
         contract_report=deepcopy(result['research_binding']['explicit_response_contract']))
     for item in report['items']:
         item['item_id'] = digest(dict(request_id=request['request_id'], path=item['path'], kind=item['kind'], anchor=item.get('anchor')))
-    report['field_items'] = field_checklist(report['original_draft'], request['request_id'])
+    if versions == ROLE_VERSIONS:
+        contract = result['research_binding']['explicit_response_contract']
+        report.update(implementation_version='1.1.0-condition-context-review',
+            original_provider_response=deepcopy(response),original_draft=deepcopy(contract['original_draft']),
+            original_response_text=contract['original_response_text'],draft_digest=digest(contract['original_draft']))
+        report['field_items'] = role_checklist(report['original_draft'],request['request_id'])
+    else:
+        report['field_items'] = field_checklist(report['original_draft'], request['request_id'])
     report['items'].extend(deepcopy(report['field_items']))
     report['field_review_status'] = 'SOURCE_REVIEW_REQUIRED'
     report['limitations'] = [s.replace('the full v21 wrapper', 'the full original wrapper') for s in report['limitations']]
@@ -87,7 +108,7 @@ def record_field_assessment(packet, request, response, received_at, reference, a
     revisions=[x.item_id for x in a.decisions if x.finding=='REVISION_REQUIRED']
     unresolved=[x.item_id for x in a.decisions if x.finding=='UNRESOLVED']
     status='REVISIONS_REQUIRED' if revisions else 'SOURCE_REVIEW_REQUIRED' if unresolved or not items else 'FIELD_REVIEW_RECORDED'
-    out=dict(implementation_version=VERSION, report_id=report['report_id'], request_id=request['request_id'],
+    out=dict(implementation_version=report['implementation_version'], report_id=report['report_id'], request_id=request['request_id'],
         trace=deepcopy(packet['trace']), original_versions=report['original_versions'],
         original_report=report, assessment=deepcopy(assessment), assessment_digest=digest(assessment),
         verified_decisions=bound, revision_item_ids=revisions, unresolved_item_ids=unresolved,

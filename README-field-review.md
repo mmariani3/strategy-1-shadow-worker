@@ -136,3 +136,7 @@ python -m pytest -q
 The subsequent [bounded v22 test and source review](README-field-provider.md)
 preserves the first real answer and its remaining revision findings. Passing
 offline tests does not establish correct real model output.
+
+The subsequent [v23 declared-role checks](README-role-review.md) add explicit
+condition, context and follow-up consistency checks, preserving this v22 contract
+and every historical answer and assessment.
