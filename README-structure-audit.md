@@ -1,5 +1,9 @@
 # Offline checks for research declarations and sparse entries
 
+Next-stage preparation: the [explicit response contract](README-explicit-contract.md)
+requires individual rule/fact links and economic core assertions in an opt-in
+offline preview. It does not change this audit, historical answers or the v20 default.
+
 The v20 comparison showed two mechanically detectable gaps: Mini selected six
 rules while explaining only an acquisition in general terms, and GPT-5.5 created
 two economic entries without recording their core expectation. The new standalone
