@@ -1,5 +1,9 @@
 # Explicit rule and economic assertions: offline preview
 
+The preview described here remains frozen. A separately versioned opt-in
+[runner and source-report integration](README-explicit-integration.md) is now
+available; it does not reinterpret saved preview requests or change the default.
+
 The v20 comparison exposed gaps that prompt instructions and literal marker
 checks cannot fix by themselves. This opt-in preview makes the missing content
 explicitly structured: one explained fact link per selected rule, and one cited

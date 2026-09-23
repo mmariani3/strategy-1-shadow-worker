@@ -82,6 +82,9 @@ class AttemptLedger:
 
 
 def execute_once(ledger, packet, request, provider, clock=utc_now):
+    from research_explicit import VERSIONS as EXPLICIT_VERSIONS, validate_integrated_request
+    if (request.get('implementation_version'), request.get('prompt_version')) == EXPLICIT_VERSIONS:
+        validate_integrated_request(packet, request)
     validate_draft(packet, unresolved_draft(packet, clock()), clock())
     if packet['packet_id'] != request['packet_id']:
         raise ReviewBlocked('REQUEST_PACKET_MISMATCH')
