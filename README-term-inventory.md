@@ -111,6 +111,15 @@ rejected; the prior admitted but incomplete answers remain semantically unverifi
 Private offline verification ID:
 `c4a04e996726012edba32861afcea705236cb2dfa99e407762c5ee0e8145e322`.
 
+## Subsequent provider comparison
+
+The separately budgeted v16 comparison is now complete: four calls cost an
+estimated $0.930802. Mini failed both scope-equality checks; GPT-5.5 passed both
+structural checks, but one of its answers still omitted approval mechanics.
+All 13 terms in the admitted outputs were retained exactly. See the
+[provider comparison, source review and limitations](README-term-comparison.md).
+The offline results above remain attributed to the earlier zero-call step.
+
 ## What this does and does not establish
 
 Once a term is recorded, the host summary cannot silently shorten it. A model can
@@ -121,10 +130,11 @@ truth. Semantic completeness remains `NOT_ESTABLISHED`, even for a fully populat
 inventory. This follows the documented distinction between schema adherence and
 [mistakes in structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs#handling-mistakes).
 
-The next paid comparison needs separately frozen, attributable source references,
-unchanged full testing limits and a verified budget. No paid run is scheduled by
-this change; the prepared DAIC/FSI cases are now development material, not fresh
-independent acceptance evidence. Do not claim improved model behavior until measured.
+Any additional paid comparison needs separately frozen, attributable source
+references, unchanged full testing limits and a verified budget. The prepared
+DAIC/FSI cases and the subsequent WBA/JNPR comparison are now development material,
+not fresh independent acceptance evidence. The comparison does not establish
+unattended qualification reliability.
 
 Living master revisions were reread and unchanged: Strategy v0.3, Experiment v0.5,
 Automation v0.4. No merge, production deployment, Journal write, broker enablement,
