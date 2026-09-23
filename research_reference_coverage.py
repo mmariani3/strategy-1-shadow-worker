@@ -48,8 +48,12 @@ def audit_reference_coverage(packet, request, draft, reference):
     from research_economic import VERSIONS as ECONOMIC_VERSIONS, validate_economic_request
     from research_terms import VERSIONS as TERMS_VERSIONS, TermsDraft, validate_terms_request
     from research_scope import VERSIONS as SINGLE_SCOPE_VERSIONS, project_draft, validate_scope_request
+    from research_typed import VERSIONS as TYPED_VERSIONS, validate_typed_request
     versions = (request.get('implementation_version'), request.get('prompt_version'))
-    if versions == SINGLE_SCOPE_VERSIONS:
+    if versions == TYPED_VERSIONS:
+        validate_typed_request(packet, request)
+        audit_version = '1.4.0-reference-location-audit'
+    elif versions == SINGLE_SCOPE_VERSIONS:
         validate_scope_request(packet, request)
         audit_version = '1.3.0-reference-location-audit'
     elif versions == TERMS_VERSIONS:
@@ -66,7 +70,7 @@ def audit_reference_coverage(packet, request, draft, reference):
     if request['request_id'] != digest(dict(version=versions[0], prompt_version=versions[1], body=request['body'])):
         raise ValueError('REQUEST_DIGEST_MISMATCH')
     evidence_message(packet)
-    if versions == SINGLE_SCOPE_VERSIONS:
+    if versions in (SINGLE_SCOPE_VERSIONS, TYPED_VERSIONS):
         d = project_draft(draft)['research']
     elif versions == TERMS_VERSIONS:
         TermsDraft.model_validate(draft)

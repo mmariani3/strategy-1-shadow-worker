@@ -1,5 +1,9 @@
 # Automated research reviewer
 
+The default request contract is now [v18: constrained labels and offline omission
+review](README-typed-research.md). This update was tested offline only; historical
+provider comparisons below retain their original versions and outcomes.
+
 This implements an opt-in OpenAI Responses API client for the packets in [PR #5](https://github.com/mmariani3/strategy-1-shadow-worker/pull/5). It can request a substantive, source-cited research assessment and compare its claims with a separately supplied reference. **It cannot qualify candidates, refresh live approvals, confirm triggers, establish experimental observations or enable execution.**
 
 Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchanged. The review method remains a proposal pending independent semantic assessment and acceptance in the governing Automation Specification. No model/provider subscription, credential, hosted service, live retrieval or deployment is provisioned by this change.

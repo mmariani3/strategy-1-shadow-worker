@@ -151,8 +151,9 @@ def test_durable_exact_replay_and_unchanged_full_limits(linked_case):
     assert len(calls)==1 and d==original
 
 
-def test_cli_defaults_to_single_scope_without_provider(linked_case,monkeypatch,capsys):
+def test_historical_cli_single_scope_without_provider(linked_case,monkeypatch,capsys):
     import run_research_reviewer as cli
+    monkeypatch.setattr(cli,'prepare_request',prepare_scope_request)
     assert cli.prepare_request is prepare_scope_request
     p,_,_,_,m=make_case(linked_case);root=ledger_path().parent
     for name,v in [('p',p),('m',m)]: (root/(name+'.json')).write_text(canonical(v),encoding='utf-8')

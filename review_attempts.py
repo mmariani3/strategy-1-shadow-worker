@@ -110,6 +110,9 @@ def execute_once(ledger, packet, request, provider, clock=utc_now):
     from research_economic import VERSIONS as ECONOMIC_VERSIONS, validate_economic_request
     from research_terms import VERSIONS as TERMS_VERSIONS, validate_terms_request
     from research_scope import VERSIONS as SINGLE_SCOPE_VERSIONS, validate_scope_request
+    from research_typed import VERSIONS as TYPED_VERSIONS, validate_typed_request
+    if (request['implementation_version'], request['prompt_version']) == TYPED_VERSIONS:
+        validate_typed_request(packet, request)
     if (request['implementation_version'], request['prompt_version']) == SINGLE_SCOPE_VERSIONS:
         validate_scope_request(packet, request)
     if (request['implementation_version'], request['prompt_version']) == TERMS_VERSIONS:
