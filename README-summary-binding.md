@@ -110,11 +110,11 @@ rejected original still cannot be passed to the completed-assessment recorder.
 
 ## Boundaries and remaining evidence
 
-**Zero paid API calls and no credential access in this step.** Provider acceptance
-of the new schema and actual v25 answer quality remain unverified. The next
-evaluation is a separately bounded full-input provider test followed by review of
-its unmodified original answer. Passing offline cases does not establish general
-reliability, hands-off readiness, trading eligibility or profitability.
+**Zero paid API calls and no credential access in this offline step.** The
+subsequent [bounded provider test and source review](README-binding-provider.md)
+preserve the actual original answer and its separate judgments. Passing offline
+cases does not establish general reliability, hands-off readiness, trading
+eligibility or profitability.
 
 No database migration is required. No Strategy v0.3 or Experiment v0.5
 methodology, risk, setup, trigger, stop, target or eligibility change. No synced
