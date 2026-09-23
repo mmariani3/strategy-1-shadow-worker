@@ -86,8 +86,9 @@ synthetic corrected examples move future benefits into supported forecast fields
 without dropping them. They are not repaired provider responses and do not
 measure real model performance. No strategy thresholds are introduced.
 
-Full test and historical replay results are recorded in the completed verification
-section below. No paid v22 test has been run, so improved model output quality
+Full test and historical replay results from implementation are recorded below.
+The subsequent [bounded v22 provider test](README-field-provider.md) established
+API acceptance but retained source-meaning defects; general output reliability
 has not been established.
 
 ## Changed files and boundaries
@@ -132,5 +133,6 @@ python -m pytest -q tests/test_research_fields.py
 python -m pytest -q
 ```
 
-The next evidence step is a bounded v22 provider test followed by source review.
-Passing offline tests does not establish improved real model output.
+The subsequent [bounded v22 test and source review](README-field-provider.md)
+preserves the first real answer and its remaining revision findings. Passing
+offline tests does not establish correct real model output.
