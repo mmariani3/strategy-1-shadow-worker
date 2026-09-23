@@ -47,6 +47,9 @@ def evidence_message(packet, compact=True):
 
 
 def compact_request(request):
+    from research_nature import VERSIONS as NATURE_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == NATURE_VERSIONS:
+        return True
     from research_roles import VERSIONS as ROLE_VERSIONS
     if (request.get('implementation_version'), request.get('prompt_version')) == ROLE_VERSIONS:
         return True
@@ -97,6 +100,10 @@ def compact_request(request):
 
 
 def request_evidence_message(packet, request):
+    from research_nature import VERSIONS as NATURE_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == NATURE_VERSIONS:
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
     from research_roles import VERSIONS as ROLE_VERSIONS
     if (request.get('implementation_version'), request.get('prompt_version')) == ROLE_VERSIONS:
         from research_linked import linked_evidence_message
@@ -318,8 +325,13 @@ def parse_response(packet, request, response, reviewed_at):
     from research_explicit import VERSIONS as EXPLICIT_VERSIONS, resolve_integrated_draft
     from research_fields import VERSIONS as FIELD_VERSIONS, resolve_field_draft
     from research_roles import VERSIONS as ROLE_VERSIONS, resolve_role_draft
+    from research_nature import VERSIONS as NATURE_VERSIONS, resolve_nature_draft
     scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS, READABLE_VERSIONS, PASSAGE_VERSIONS, LINKED_VERSIONS, ECONOMIC_VERSIONS, TERMS_VERSIONS, SINGLE_SCOPE_VERSIONS, TYPED_VERSIONS, TIER_VERSIONS, SEMANTIC_VERSIONS)
-    if versions == ROLE_VERSIONS:
+    if versions == NATURE_VERSIONS:
+        scoped = True
+        resolved, facts, coverage, selection_audit, binding = resolve_nature_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == ROLE_VERSIONS:
         scoped = True
         resolved, facts, coverage, selection_audit, binding = resolve_role_draft(packet, request, texts[0])
         draft = ModelDraft.model_validate(resolved)
@@ -433,7 +445,7 @@ def parse_response(packet, request, response, reviewed_at):
         result['citation_selection_audit'] = selection_audit
     if binding is not None:
         result['research_binding'] = binding
-        if versions in (TERMS_VERSIONS, SINGLE_SCOPE_VERSIONS, TYPED_VERSIONS, TIER_VERSIONS, SEMANTIC_VERSIONS, EXPLICIT_VERSIONS, FIELD_VERSIONS, ROLE_VERSIONS):
+        if versions in (TERMS_VERSIONS, SINGLE_SCOPE_VERSIONS, TYPED_VERSIONS, TIER_VERSIONS, SEMANTIC_VERSIONS, EXPLICIT_VERSIONS, FIELD_VERSIONS, ROLE_VERSIONS, NATURE_VERSIONS):
             # Required economic presentation; the short research narrative alone
             # is not the full result. Retain even unresolved inventory states.
             result['economic_summary'] = deepcopy(binding['economic_inventory']['summary'])

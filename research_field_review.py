@@ -17,10 +17,12 @@ VERSION = '1.0.0-condition-timing-review'
 
 def field_review(packet, request, response, received_at, reference):
     from research_roles import VERSIONS as ROLE_VERSIONS, validate_role_request, role_checklist
+    from research_nature import VERSIONS as NATURE_VERSIONS, validate_nature_request, nature_checklist
     versions = (request.get('implementation_version'), request.get('prompt_version'))
     projected_response = response
-    if versions == ROLE_VERSIONS:
-        _, field_request = validate_role_request(packet, request)
+    if versions in (ROLE_VERSIONS, NATURE_VERSIONS):
+        role_request = validate_nature_request(packet, request)[1] if versions == NATURE_VERSIONS else request
+        _, field_request = validate_role_request(packet, role_request)
         _, previous = validate_field_request(packet, field_request)
         # Projection is for the frozen v21 exporter only. The report below
         # restores the exact original text, wrapper and provider envelope.
@@ -30,7 +32,7 @@ def field_review(packet, request, response, received_at, reference):
                 for part in message.get('content', []):
                     if part.get('type') == 'output_text':
                         raw = json.loads(part['text'])
-                        part['text'] = canonical({k:v for k,v in raw.items() if k != 'meaning_contract'})
+                        part['text'] = canonical({k:v for k,v in raw.items() if k not in ('meaning_contract','term_classifications')})
     elif versions == VERSIONS:
         _, previous = validate_field_request(packet, request)
     elif versions == PREVIOUS:
@@ -45,12 +47,15 @@ def field_review(packet, request, response, received_at, reference):
         contract_report=deepcopy(result['research_binding']['explicit_response_contract']))
     for item in report['items']:
         item['item_id'] = digest(dict(request_id=request['request_id'], path=item['path'], kind=item['kind'], anchor=item.get('anchor')))
-    if versions == ROLE_VERSIONS:
+    if versions in (ROLE_VERSIONS, NATURE_VERSIONS):
         contract = result['research_binding']['explicit_response_contract']
         report.update(implementation_version='1.1.0-condition-context-review',
             original_provider_response=deepcopy(response),original_draft=deepcopy(contract['original_draft']),
             original_response_text=contract['original_response_text'],draft_digest=digest(contract['original_draft']))
         report['field_items'] = role_checklist(report['original_draft'],request['request_id'])
+        if versions == NATURE_VERSIONS:
+            report['implementation_version'] = '1.2.0-economic-nature-review'
+            report['field_items'] = nature_checklist(report['original_draft'],request['request_id'])
     else:
         report['field_items'] = field_checklist(report['original_draft'], request['request_id'])
     report['items'].extend(deepcopy(report['field_items']))

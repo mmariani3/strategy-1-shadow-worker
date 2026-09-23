@@ -82,6 +82,9 @@ class AttemptLedger:
 
 
 def execute_once(ledger, packet, request, provider, clock=utc_now):
+    from research_nature import VERSIONS as NATURE_VERSIONS, validate_nature_request
+    if (request.get('implementation_version'), request.get('prompt_version')) == NATURE_VERSIONS:
+        validate_nature_request(packet, request)
     from research_roles import VERSIONS as ROLE_VERSIONS, validate_role_request
     if (request.get('implementation_version'), request.get('prompt_version')) == ROLE_VERSIONS:
         validate_role_request(packet, request)
