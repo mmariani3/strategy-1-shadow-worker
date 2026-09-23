@@ -1,5 +1,9 @@
 # Review individual rules, timing and source qualifications
 
+The [offline structure audit](README-structure-audit.md) now flags missing explicit
+rule declarations and sparse economic entries in saved v20 drafts. It adds review
+signals without changing this review's historical behavior or granting approval.
+
 **Subsequent provider evidence:** the [v20 fresh-source comparison](README-semantic-comparison.md)
 now records two complete calls costing $0.44708250. Mini still requires revisions;
 GPT-5.5 has two unresolved structured entries. The implementation/offline results

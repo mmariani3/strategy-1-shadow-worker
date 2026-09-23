@@ -1,5 +1,8 @@
 # v20 fresh-source provider comparison
 
+Follow-up: [offline declaration and sparse-entry checks](README-structure-audit.md)
+now detect the two structural patterns in these unchanged answers without API calls.
+
 ## Result
 
 Two complete provider calls on one new historical primary-source document passed
