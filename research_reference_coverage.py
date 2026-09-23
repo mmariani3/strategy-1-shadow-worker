@@ -46,8 +46,12 @@ def audit_reference_coverage(packet, request, draft, reference):
     Neither status admits, rejects or changes the saved research result.
     """
     from research_economic import VERSIONS as ECONOMIC_VERSIONS, validate_economic_request
+    from research_terms import VERSIONS as TERMS_VERSIONS, TermsDraft, validate_terms_request
     versions = (request.get('implementation_version'), request.get('prompt_version'))
-    if versions == ECONOMIC_VERSIONS:
+    if versions == TERMS_VERSIONS:
+        validate_terms_request(packet, request)
+        audit_version = '1.2.0-reference-location-audit'
+    elif versions == ECONOMIC_VERSIONS:
         validate_economic_request(packet, request)
         audit_version = '1.1.0-reference-location-audit'
     elif versions == VERSIONS:
@@ -58,8 +62,13 @@ def audit_reference_coverage(packet, request, draft, reference):
     if request['request_id'] != digest(dict(version=versions[0], prompt_version=versions[1], body=request['body'])):
         raise ValueError('REQUEST_DIGEST_MISMATCH')
     evidence_message(packet)
-    LinkedDraft.model_validate(draft)
-    d = draft  # Inspect original strings, not whitespace-normalized model_dump values.
+    if versions == TERMS_VERSIONS:
+        TermsDraft.model_validate(draft)
+        d = draft['research']
+    else:
+        LinkedDraft.model_validate(draft)
+        d = draft
+    # Inspect original strings, not whitespace-normalized model_dump values.
     if (d['target']['symbol'] != packet['symbol'] or d['materiality_coverage']['subject_symbol'] != packet['symbol']
             or any(c['subject_symbol'] != packet['symbol'] for c in d['claims'])):
         raise ValueError('DRAFT_TARGET_MISMATCH')
@@ -90,7 +99,7 @@ def audit_reference_coverage(packet, request, draft, reference):
             for k, v in value.items(): walk(v, path + (k,))
         elif isinstance(value, list):
             for i, v in enumerate(value): walk(v, path + (i,))
-    walk(d)
+    walk(draft)
     sources = {s['source_id']: s for s in packet['sources']}; rows = []
     for a in anchors:
         if not isinstance(a['id'], str) or not a['id'].strip() or not a['expectation'].strip():

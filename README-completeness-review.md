@@ -6,6 +6,11 @@ cannot establish that a summary preserves economically important information.
 This separate review stage makes no API calls and does not change the v14 model
 prompt, admission parser, original responses or historical outcomes.
 
+The current implementation also supports the [v16 inventory envelope](README-term-inventory.md).
+For v16, scope comes from `research.materiality_coverage`; evidence paths may point
+to either the inventory or nested research. Passing the whole original envelope is
+required. Historical v14/v15 review outputs retain their original identities.
+
 ## Review procedure
 
 1. Preserve the original provider response, request, source packet and attributed

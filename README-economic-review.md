@@ -1,9 +1,12 @@
 # Research extraction v15
 
-The default prepare-only CLI now uses `1.14.0-automated-research` /
+The preserved v15 prepare-only contract uses `1.14.0-automated-research` /
 `governed-research-v15`. This is a prompt revision to address the source/prose
 failures recorded in the [completeness review](README-completeness-review.md).
 The output schema, model selection, source catalog and admission gates are unchanged.
+
+The default CLI has since moved to the [v16 economic-term inventory](README-term-inventory.md).
+The v15 results below remain attributed to the implementation actually tested.
 
 ## Changes and limits
 

@@ -51,11 +51,13 @@ def draft_value(draft, path):
 def prepare_checklist(packet, request, draft, reference):
     audit = audit_reference_coverage(packet, request, draft, reference)
     ids = [r['anchor']['id'] for r in audit['rows']]
-    return dict(audit_id=audit['audit_id'],scope=draft['materiality_coverage']['assessment_scope'],
+    prefix = ['research'] if request['prompt_version'] == 'governed-research-v16' else []
+    coverage = draft_value(draft, prefix + ['materiality_coverage'])
+    return dict(audit_id=audit['audit_id'],scope=coverage['assessment_scope'],
         assessor_id='UNASSIGNED',assessor_kind='AI_OTHER',reviewed_at='',
         limitations=['Template only; judgments and assessor attribution must be supplied after source/prose review.'],
         anchors=[dict(anchor_id=i,relevance='UNRESOLVED',finding='UNRESOLVED',rationale='Source and prose review pending.',
-            draft_evidence=[dict(path=['materiality_coverage'],value_digest=digest(draft['materiality_coverage']))]) for i in ids],
+            draft_evidence=[dict(path=prefix+['materiality_coverage'],value_digest=digest(coverage))]) for i in ids],
         aspects=[dict(aspect=a,status='UNRESOLVED',anchor_ids=ids,rationale='Scope-specific review pending.') for a in ASPECTS])
 
 
@@ -63,7 +65,8 @@ def record_completeness_review(packet, request, draft, reference, assessment, no
     audit = audit_reference_coverage(packet, request, draft, reference)
     review = Assessment.model_validate(assessment)
     if review.audit_id != audit['audit_id']: raise ValueError('COMPLETENESS_AUDIT_MISMATCH')
-    if review.scope != draft['materiality_coverage']['assessment_scope']:
+    coverage = draft_value(draft, (['research'] if request['prompt_version'] == 'governed-research-v16' else []) + ['materiality_coverage'])
+    if review.scope != coverage['assessment_scope']:
         raise ValueError('COMPLETENESS_SCOPE_MISMATCH')
     if review.assessor_id == 'UNASSIGNED': raise ValueError('ASSESSOR_REQUIRED')
     when = aware(review.reviewed_at)
@@ -95,7 +98,7 @@ def record_completeness_review(packet, request, draft, reference, assessment, no
         request_id=request['request_id'],draft_digest=digest(draft),reference_digest=digest(reference),assessment_digest=digest(assessment),
         assessment=assessment,verified_draft_evidence=evidence,source_rows=audit['rows'],
         status=status,revision_anchor_ids=changes,unresolved_anchor_ids=unresolved,unresolved_aspects=pending,
-        invalid_selections=audit['invalid_selections'],original_coverage_status=draft['materiality_coverage']['status'],
+        invalid_selections=audit['invalid_selections'],original_coverage_status=coverage['status'],
         summary_completeness='NOT_ESTABLISHED',semantic_acceptance='NOT_ESTABLISHED',eligible_for_handoff=False,
         classification='INFRASTRUCTURE_EVALUATION',assessor_independence='NOT_ESTABLISHED_BY_SOFTWARE',
         original_admission='NOT_EVALUATED_OR_CHANGED',

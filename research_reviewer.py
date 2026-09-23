@@ -47,6 +47,9 @@ def evidence_message(packet, compact=True):
 
 
 def compact_request(request):
+    from research_terms import VERSIONS as TERMS_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == TERMS_VERSIONS:
+        return True
     from research_economic import VERSIONS as ECONOMIC_VERSIONS
     if (request.get('implementation_version'), request.get('prompt_version')) == ECONOMIC_VERSIONS:
         return True
@@ -75,6 +78,10 @@ def compact_request(request):
 
 
 def request_evidence_message(packet, request):
+    from research_terms import VERSIONS as TERMS_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == TERMS_VERSIONS:
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
     from research_economic import VERSIONS as ECONOMIC_VERSIONS
     if (request.get('implementation_version'), request.get('prompt_version')) == ECONOMIC_VERSIONS:
         from research_linked import linked_evidence_message
@@ -259,8 +266,12 @@ def parse_response(packet, request, response, reviewed_at):
     from research_passages import VERSIONS as PASSAGE_VERSIONS, resolve_passage_draft
     from research_linked import VERSIONS as LINKED_VERSIONS, resolve_linked_draft
     from research_economic import VERSIONS as ECONOMIC_VERSIONS, resolve_economic_draft
-    scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS, READABLE_VERSIONS, PASSAGE_VERSIONS, LINKED_VERSIONS, ECONOMIC_VERSIONS)
-    if versions == ECONOMIC_VERSIONS:
+    from research_terms import VERSIONS as TERMS_VERSIONS, resolve_terms_draft
+    scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS, READABLE_VERSIONS, PASSAGE_VERSIONS, LINKED_VERSIONS, ECONOMIC_VERSIONS, TERMS_VERSIONS)
+    if versions == TERMS_VERSIONS:
+        resolved, facts, coverage, selection_audit, binding = resolve_terms_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == ECONOMIC_VERSIONS:
         resolved, facts, coverage, selection_audit, binding = resolve_economic_draft(packet, request, texts[0])
         draft = ModelDraft.model_validate(resolved)
     elif versions == LINKED_VERSIONS:
@@ -347,4 +358,8 @@ def parse_response(packet, request, response, reviewed_at):
         result['citation_selection_audit'] = selection_audit
     if binding is not None:
         result['research_binding'] = binding
+        if versions == TERMS_VERSIONS:
+            # Required economic presentation; the short research narrative alone
+            # is not the full result. Retain even unresolved inventory states.
+            result['economic_summary'] = deepcopy(binding['economic_inventory']['summary'])
     return result

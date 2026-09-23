@@ -6,18 +6,29 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-For a zero-API-cost review of saved v14/v15 answers, see [offline reference-location
+For a zero-API-cost review of saved v14/v15/v16 answers, see [offline reference-location
 review](README-reference-coverage.md). It flags uncited source checklist passages
 without changing the reviewer, historical outcomes or semantic-approval boundaries.
 
-### Default CLI: economic extraction v15
+### Default CLI: economic-term inventory v16
 
-The default is `1.14.0-automated-research` / `governed-research-v15`, prepared by
+The default is `1.15.0-automated-research` / `governed-research-v16`, prepared by
+`research_terms.prepare_terms_request`. An explicit inventory precedes the nested
+research object; the host generates a lossless `economic_summary`. Consumers must
+retain/present that summary alongside the concise narrative. Amounts, conditions,
+timing and qualifications cannot be silently dropped from recorded terms, but
+omissions during extraction and semantic errors still require source review.
+See [v16 contract, 781-test verification and limits](README-term-inventory.md).
+Zero v16 provider calls; no claim of improved model accuracy.
+
+### Preserved economic extraction v15
+
+The prior version is `1.14.0-automated-research` / `governed-research-v15`, prepared by
 `research_economic.prepare_economic_request`. It adds scope-specific source/prose
 checks for economic terms, fees, conditions, timing, counterevidence and unsupported
 prerequisites. The existing inline-support schema and frozen v14 parser remain in
 use. See [v15 changes, tests and limitations](README-economic-review.md).
-This revision has passed offline checks only; improved model output is unverified.
+Its four-call comparison still found material omissions in technically admitted drafts.
 
 ### Preserved inline numbered support v14
 
@@ -234,7 +245,7 @@ Four actual-CLI calls on frozen runtime tree
 | --- | --- | --- | ---: |
 | VWAV | Mini | Blocked: readable quote mismatch | $0.02603175 |
 | VWAV | GPT-5.5 | Structurally admitted research draft; exact replay | $0.39874500 |
-| PH | Mini | Blocked: readable quote mismatch | $0.02278050 |
+| PH | Mini | Blocked: readable quote mismatch | $0.02278150 |
 | PH | GPT-5.5 | Blocked: quotation occurs twice within its excerpt | $0.34471000 |
 
 All four provider responses completed. v12 cost **$0.79226725**; both campaigns

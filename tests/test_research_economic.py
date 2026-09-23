@@ -115,9 +115,9 @@ def test_source_omission_and_false_prose_still_need_attributed_review(linked_cas
     assert d==original and report['original_admission']=='NOT_EVALUATED_OR_CHANGED'
 
 
-def test_default_cli_prepares_v15_without_provider_or_credentials(linked_case,monkeypatch,capsys):
+def test_pinned_cli_prepares_v15_without_provider_or_credentials(linked_case,monkeypatch,capsys):
     import run_research_reviewer as cli
-    assert cli.prepare_request is prepare_economic_request
+    monkeypatch.setattr(cli,'prepare_request',prepare_economic_request)
     p,_,m=linked_case;root=ledger_path().parent
     (root/'p.json').write_text(canonical(p),encoding='utf-8');(root/'m.json').write_text(canonical(m),encoding='utf-8')
     def forbidden(*a,**k):raise AssertionError('No provider or credentials')
