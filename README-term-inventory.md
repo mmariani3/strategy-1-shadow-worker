@@ -1,5 +1,9 @@
 # Economic-term inventory v16
 
+This frozen contract remains supported. The current default is
+[v17 single scope and source wording](README-single-scope.md); historical v16
+responses and outcomes are unchanged.
+
 The v15 comparison showed that a model could cite an entire acquisition paragraph
 while omitting the conditional reimbursement and lease-backstop amounts from its
 answer. V16 gives those terms an explicit record before the narrative and generates

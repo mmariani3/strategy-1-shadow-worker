@@ -162,7 +162,8 @@ def test_full_source_limits_frozen_legacy_and_durable_replay(linked_case):
 
 def test_cli_default_prepares_new_contract_without_provider(linked_case,monkeypatch,capsys):
     import run_research_reviewer as cli
-    assert cli.prepare_request is prepare_terms_request
+    # Historical v16 CLI behavior remains pinned as the default evolves.
+    monkeypatch.setattr(cli,'prepare_request',prepare_terms_request)
     p,_,_,_,m,_=make_case(linked_case);root=ledger_path().parent
     for name,v in [('p',p),('m',m)]: (root/(name+'.json')).write_text(canonical(v),encoding='utf-8')
     def forbidden(*a,**k):raise AssertionError('No credential or provider access')

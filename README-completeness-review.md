@@ -10,6 +10,8 @@ The current implementation also supports the [v16 inventory envelope](README-ter
 For v16, scope comes from `research.materiality_coverage`; evidence paths may point
 to either the inventory or nested research. Passing the whole original envelope is
 required. Historical v14/v15 review outputs retain their original identities.
+For [v17](README-single-scope.md), scope comes only from root `assessment_scope`;
+original inventory/research paths are preserved. Historical v16 reviews are unchanged.
 
 ## Review procedure
 

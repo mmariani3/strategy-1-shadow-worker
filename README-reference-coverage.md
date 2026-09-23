@@ -1,13 +1,15 @@
 # Offline reference-location review
 
-`research_reference_coverage.py` compares a saved v14, v15 or v16 draft's passage selections
+`research_reference_coverage.py` compares a saved v14–v17 draft's passage selections
 with an externally supplied, source-anchored checklist. It makes **zero model calls**
 and never reads credentials, changes the saved answer, changes its admission outcome,
 qualifies a candidate or writes to trading services. The [default reviewer is now
-v16](README-term-inventory.md). V14 reports keep their original audit version and
+v17](README-single-scope.md). V14 reports keep their original audit version and
 exact output; v15 reports use version 1.1.0, and v16 reports use 1.2.0. V16 audits
 inspect the original envelope, including inventory and nested research selections.
 Paths retain their `economic_inventory` or `research` prefixes.
+V17 audits use version 1.3.0, inspect original paths and validate the root scope.
+Historical v14–v16 audits and digests remain unchanged.
 
 This is an evaluation sidecar, not an automatic completeness or accuracy judge.
 Its name and statuses describe **locations**, not economic meaning.

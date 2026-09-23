@@ -6,20 +6,29 @@ Phase 1 remains SHADOW. Strategy Rules v0.3 and Experiment Plan v0.5 are unchang
 
 ## What the reviewer receives
 
-For a zero-API-cost review of saved v14/v15/v16 answers, see [offline reference-location
+For a zero-API-cost review of saved v14–v17 answers, see [offline reference-location
 review](README-reference-coverage.md). It flags uncited source checklist passages
 without changing the reviewer, historical outcomes or semantic-approval boundaries.
 
-### Default CLI: economic-term inventory v16
+### Default CLI: one scope and source wording v17
 
-The default is `1.15.0-automated-research` / `governed-research-v16`, prepared by
+The default is `1.16.0-automated-research` / `governed-research-v17`, prepared by
+`research_scope.prepare_scope_request`. One root scope replaces duplicate fields.
+The mandatory economic summary retains each entry and adds its full selected
+source passages. Consumers must present source wording with model statements.
+See [contract, offline verification and limits](README-single-scope.md).
+Zero v17 provider calls; no claim of improved model accuracy.
+
+### Preserved economic-term inventory v16
+
+The prior contract is `1.15.0-automated-research` / `governed-research-v16`, prepared by
 `research_terms.prepare_terms_request`. An explicit inventory precedes the nested
 research object; the host generates a lossless `economic_summary`. Consumers must
 retain/present that summary alongside the concise narrative. Amounts, conditions,
 timing and qualifications cannot be silently dropped from recorded terms, but
 omissions during extraction and semantic errors still require source review.
 See [v16 contract, 781-test verification and limits](README-term-inventory.md).
-Zero v16 provider calls; no claim of improved model accuracy.
+The [four-call v16 comparison](README-term-comparison.md) remains unchanged.
 
 ### Preserved economic extraction v15
 

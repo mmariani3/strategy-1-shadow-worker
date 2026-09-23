@@ -109,6 +109,9 @@ def execute_once(ledger, packet, request, provider, clock=utc_now):
     from research_linked import VERSIONS as LINKED_VERSIONS, validate_linked_request
     from research_economic import VERSIONS as ECONOMIC_VERSIONS, validate_economic_request
     from research_terms import VERSIONS as TERMS_VERSIONS, validate_terms_request
+    from research_scope import VERSIONS as SINGLE_SCOPE_VERSIONS, validate_scope_request
+    if (request['implementation_version'], request['prompt_version']) == SINGLE_SCOPE_VERSIONS:
+        validate_scope_request(packet, request)
     if (request['implementation_version'], request['prompt_version']) == TERMS_VERSIONS:
         validate_terms_request(packet, request)
     if (request['implementation_version'], request['prompt_version']) == ECONOMIC_VERSIONS:
