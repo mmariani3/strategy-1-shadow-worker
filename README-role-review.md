@@ -26,7 +26,7 @@ also distinguishes schema conformance from content mistakes.
 | Prospective condition labeled occurred | Condition temporal scope must match its existing time basis. Completed, prospective and atemporal conditions remain representable. | All three compatible pairs accepted; contradictory time labels rejected. | The declared scope can itself be wrong. All temporal clauses still require review. |
 | Reported result labeled expectation; caution labeled counterevidence | Context roles must match categories. Reported results belong in facts/economic terms; forecasts remain expectations; generic caution uses causal-limit context. | Both contradictions rejected; genuine forecast and observed-counterevidence declarations remain possible. | Placement must not discard facts. Completeness and source truth still need review. |
 | Optional follow-up wording could waive verification | Every follow-up declares `GOVERNING_MASTERS_UNCHANGED` and explains scope. | Missing/out-of-range follow-ups and incompatible policy values rejected; complete prose included in review. | A constant cannot prove the prose respects policy. Governing masters control verification. |
-| New checks could alter history | Separate opt-in version; exact original wrapper/text retained. Internal projections are validators only. | Original identity, source preservation, version attribution, retries, failed-response retention and attributed review tests; full historical replay. | No real v23 provider acceptance or output quality has been demonstrated. |
+| New checks could alter history | Separate opt-in version; exact original wrapper/text retained. Internal projections are validators only. | Original identity, source preservation, version attribution, retries, failed-response retention and attributed review tests; full historical replay. | One subsequent provider call establishes structural acceptance only; [source review](README-role-provider.md) remains separate. |
 
 ## Contract and changed files
 
@@ -76,11 +76,13 @@ opt-in runner with existing one-attempt protections.
 - All **121 outcomes replay exactly: 59 research admissions / 62 rejections**,
   across 25 unchanged ledgers. Prior source, output and review hashes match.
 - The complete v22 ADMA report and attributed assessment regenerate exactly.
-- Three full v23 requests prepared, **none sent**: 147,846-189,718 bytes, under
+- At the offline milestone, three full v23 requests were prepared, **none sent**:
+  147,846-189,718 bytes, under
   the unchanged 250,000-byte input ceiling and 12,000-output-token maximum. Each
   reconstructs its original v22 request exactly; prior judgments are not inputs.
 - All three living-master revisions matched their stored complete texts.
-- Zero paid calls and zero credential access in this step.
+- Zero paid calls and zero credential access in the offline implementation step.
+  The subsequent [bounded provider test](README-role-provider.md) made one call.
 
 Replay/fixture manifest:
 `39d5957d41440daac63eff19bc802f12129106859a5a6622e813d59ee33d5e01`.
@@ -107,6 +109,8 @@ migration, Strategy v0.3 or Experiment v0.5 methodology/risk/setup/trigger/stop/
 target/eligibility changes. Phase 1 SHADOW and broker-disabled repository boundaries
 remain. Live runtime configuration and live Journal state were not verified.
 
-The next evidence step, if authorized, is a bounded v23 provider test followed by
-source review. New API schema acceptance, output-token sufficiency and source
-quality remain unverified. Existing test limits have not been reduced.
+The subsequent [bounded provider test and source review](README-role-provider.md)
+preserves the original answer, findings, actual cost and unchanged historical
+outcomes. It verifies API schema acceptance and sufficient output for that one
+request, while retaining the source-review limitations and remaining findings.
+Existing test limits have not been reduced; general reliability is unestablished.
