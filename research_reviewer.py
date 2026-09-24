@@ -47,12 +47,138 @@ def evidence_message(packet, compact=True):
 
 
 def compact_request(request):
+    from research_completeness import VERSIONS as COMPLETENESS_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == COMPLETENESS_VERSIONS:
+        return True
+    from research_binding import VERSIONS as BINDING_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == BINDING_VERSIONS:
+        return True
+    from research_nature import VERSIONS as NATURE_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == NATURE_VERSIONS:
+        return True
+    from research_roles import VERSIONS as ROLE_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == ROLE_VERSIONS:
+        return True
+    from research_fields import VERSIONS as FIELD_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == FIELD_VERSIONS:
+        return True
+    from research_explicit import VERSIONS as EXPLICIT_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == EXPLICIT_VERSIONS:
+        return True
+    from research_semantics import VERSIONS as SEMANTIC_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == SEMANTIC_VERSIONS:
+        return True
+    from research_tiers import VERSIONS as TIER_VERSIONS
+    from research_typed import VERSIONS as TYPED_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) in (TYPED_VERSIONS, TIER_VERSIONS):
+        return True
+    from research_scope import VERSIONS as SINGLE_SCOPE_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == SINGLE_SCOPE_VERSIONS:
+        return True
+    from research_terms import VERSIONS as TERMS_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == TERMS_VERSIONS:
+        return True
+    from research_economic import VERSIONS as ECONOMIC_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == ECONOMIC_VERSIONS:
+        return True
+    from research_linked import VERSIONS as LINKED_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == LINKED_VERSIONS:
+        return True
+    from research_passages import VERSIONS as PASSAGE_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == PASSAGE_VERSIONS:
+        return True
+    from research_readable import VERSIONS as READABLE_VERSIONS
+    from research_support import VERSIONS as SUPPORT_VERSIONS
+    from research_facts import VERSIONS as FACT_VERSIONS
+    from research_citations import VERSIONS as SELECTION_VERSIONS
+    from research_coverage import VERSIONS as COVERAGE_VERSIONS
+    from research_scoped import VERSIONS as SCOPED_VERSIONS
+    from research_bounded import VERSIONS as BOUNDED_VERSIONS
+    from research_context import VERSIONS as CONTEXT_VERSIONS
+    from research_subjects import VERSIONS as SUBJECT_VERSIONS
+    from research_gaps import VERSIONS as GAP_VERSIONS
     versions = (request.get('implementation_version'), request.get('prompt_version'))
     if versions == LEGACY_VERSIONS:
         return False
-    if versions == (VERSION, PROMPT_VERSION):
+    if versions in ((VERSION, PROMPT_VERSION), FACT_VERSIONS, SELECTION_VERSIONS, COVERAGE_VERSIONS, SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS, READABLE_VERSIONS):
         return True
     raise ReviewBlocked('UNSUPPORTED_REQUEST_VERSION')
+
+
+def request_evidence_message(packet, request):
+    from research_completeness import VERSIONS as COMPLETENESS_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == COMPLETENESS_VERSIONS:
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
+    from research_binding import VERSIONS as BINDING_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == BINDING_VERSIONS:
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
+    from research_nature import VERSIONS as NATURE_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == NATURE_VERSIONS:
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
+    from research_roles import VERSIONS as ROLE_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == ROLE_VERSIONS:
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
+    from research_fields import VERSIONS as FIELD_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == FIELD_VERSIONS:
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
+    from research_explicit import VERSIONS as EXPLICIT_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == EXPLICIT_VERSIONS:
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
+    from research_semantics import VERSIONS as SEMANTIC_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == SEMANTIC_VERSIONS:
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
+    from research_tiers import VERSIONS as TIER_VERSIONS
+    from research_typed import VERSIONS as TYPED_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) in (TYPED_VERSIONS, TIER_VERSIONS):
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
+    from research_scope import VERSIONS as SINGLE_SCOPE_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == SINGLE_SCOPE_VERSIONS:
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
+    from research_terms import VERSIONS as TERMS_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == TERMS_VERSIONS:
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
+    from research_economic import VERSIONS as ECONOMIC_VERSIONS
+    if (request.get('implementation_version'), request.get('prompt_version')) == ECONOMIC_VERSIONS:
+        from research_linked import linked_evidence_message
+        return linked_evidence_message(packet)
+    from research_linked import VERSIONS as LINKED_VERSIONS, linked_evidence_message
+    if (request.get('implementation_version'), request.get('prompt_version')) == LINKED_VERSIONS:
+        return linked_evidence_message(packet)
+    from research_passages import VERSIONS as PASSAGE_VERSIONS, passage_evidence_message
+    if (request.get('implementation_version'), request.get('prompt_version')) == PASSAGE_VERSIONS:
+        return passage_evidence_message(packet)
+    from research_readable import VERSIONS as READABLE_VERSIONS
+    from research_support import VERSIONS as SUPPORT_VERSIONS
+    from research_subjects import VERSIONS as SUBJECT_VERSIONS
+    from research_gaps import VERSIONS as GAP_VERSIONS
+    from research_context import VERSIONS as CONTEXT_VERSIONS, context_evidence_message
+    from research_facts import VERSIONS as FACT_VERSIONS, fact_evidence_message
+    from research_citations import VERSIONS as SELECTION_VERSIONS, selection_evidence_message
+    from research_coverage import VERSIONS as COVERAGE_VERSIONS, coverage_evidence_message
+    from research_scoped import VERSIONS as SCOPED_VERSIONS, scoped_evidence_message
+    from research_bounded import VERSIONS as BOUNDED_VERSIONS
+    compact = compact_request(request)
+    if (request['implementation_version'], request['prompt_version']) in (CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS, READABLE_VERSIONS):
+        return context_evidence_message(packet)
+    if (request['implementation_version'], request['prompt_version']) in (SCOPED_VERSIONS, BOUNDED_VERSIONS):
+        return scoped_evidence_message(packet)
+    if (request['implementation_version'], request['prompt_version']) == COVERAGE_VERSIONS:
+        return coverage_evidence_message(packet)
+    if (request['implementation_version'], request['prompt_version']) == SELECTION_VERSIONS:
+        return selection_evidence_message(packet)
+    if (request['implementation_version'], request['prompt_version']) == FACT_VERSIONS:
+        return fact_evidence_message(packet)
+    return evidence_message(packet, compact)
 
 
 class Quote(Strict):
@@ -138,18 +264,29 @@ def prepare_request(packet, masters, model, max_output_tokens, max_input_bytes, 
 
 
 class OpenAIReviewer:
-    def __init__(self, api_key):
+    TRANSPORT_VERSION = 'openai-responses-http-v2'
+
+    def __init__(self, api_key, read_timeout_seconds=180):
         if not isinstance(api_key, str) or not api_key.strip():
             raise ReviewBlocked('API_CREDENTIAL_MISSING')
+        if type(read_timeout_seconds) is not int or read_timeout_seconds <= 0:
+            raise ReviewBlocked('POSITIVE_READ_TIMEOUT_REQUIRED')
         self._key = api_key
+        self._read_timeout_seconds = read_timeout_seconds
+
+    def transport_metadata(self):
+        return dict(transport_version=self.TRANSPORT_VERSION, connect_timeout_seconds=10,
+            read_timeout_seconds=self._read_timeout_seconds, automatic_retries=False,
+            allow_redirects=False, trust_environment=False)
 
     def respond(self, body):
         # Fixed endpoint; no source URLs, redirects, model tools, automatic retries or streaming.
         try:
             with requests.Session() as session:
+                session.trust_env = False
                 response = session.post(ENDPOINT,
                     headers={'Authorization': 'Bearer ' + self._key, 'Content-Type': 'application/json'},
-                    data=canonical(body).encode('utf-8'), timeout=(10, 60), allow_redirects=False)
+                    data=canonical(body).encode('utf-8'), timeout=(10, self._read_timeout_seconds), allow_redirects=False)
                 if response.status_code != 200:
                     raise ReviewBlocked('PROVIDER_HTTP_FAILURE')
                 return response.json()
@@ -177,16 +314,139 @@ def parse_response(packet, request, response, reviewed_at):
             texts.append(content.get('text'))
     if len(texts) != 1 or not isinstance(texts[0], str):
         raise ReviewBlocked('AMBIGUOUS_PROVIDER_TEXT')
-    draft = ModelDraft.model_validate_json(texts[0])
+    from research_facts import VERSIONS as FACT_VERSIONS, resolve_draft
+    from research_citations import VERSIONS as SELECTION_VERSIONS, resolve_selected_draft
+    from research_coverage import VERSIONS as COVERAGE_VERSIONS, resolve_coverage_draft
+    from research_scoped import VERSIONS as SCOPED_VERSIONS, resolve_scoped_draft
+    from research_bounded import VERSIONS as BOUNDED_VERSIONS, resolve_bounded_draft, validate_bounded_request
+    from research_context import VERSIONS as CONTEXT_VERSIONS, resolve_context_draft, validate_context_request
+    from research_gaps import VERSIONS as GAP_VERSIONS, resolve_gap_draft, validate_gap_request
+    from research_subjects import VERSIONS as SUBJECT_VERSIONS, resolve_subject_draft, validate_subject_request
+    from research_support import VERSIONS as SUPPORT_VERSIONS, resolve_support_draft, validate_support_request
+    from research_readable import VERSIONS as READABLE_VERSIONS, resolve_readable_draft, validate_readable_request
+    facts = None
+    coverage = selection_audit = None
+    binding = None
+    versions = (request['implementation_version'], request['prompt_version'])
+    from research_passages import VERSIONS as PASSAGE_VERSIONS, resolve_passage_draft
+    from research_linked import VERSIONS as LINKED_VERSIONS, resolve_linked_draft
+    from research_economic import VERSIONS as ECONOMIC_VERSIONS, resolve_economic_draft
+    from research_terms import VERSIONS as TERMS_VERSIONS, resolve_terms_draft
+    from research_scope import VERSIONS as SINGLE_SCOPE_VERSIONS, resolve_scope_draft
+    from research_typed import VERSIONS as TYPED_VERSIONS, resolve_typed_draft
+    from research_tiers import VERSIONS as TIER_VERSIONS, resolve_tier_draft
+    from research_semantics import VERSIONS as SEMANTIC_VERSIONS, resolve_semantic_draft
+    from research_explicit import VERSIONS as EXPLICIT_VERSIONS, resolve_integrated_draft
+    from research_fields import VERSIONS as FIELD_VERSIONS, resolve_field_draft
+    from research_roles import VERSIONS as ROLE_VERSIONS, resolve_role_draft
+    from research_nature import VERSIONS as NATURE_VERSIONS, resolve_nature_draft
+    from research_binding import VERSIONS as BINDING_VERSIONS, resolve_binding_draft
+    from research_completeness import VERSIONS as COMPLETENESS_VERSIONS, resolve_completeness_draft
+    scoped = versions in (SCOPED_VERSIONS, BOUNDED_VERSIONS, CONTEXT_VERSIONS, GAP_VERSIONS, SUBJECT_VERSIONS, SUPPORT_VERSIONS, READABLE_VERSIONS, PASSAGE_VERSIONS, LINKED_VERSIONS, ECONOMIC_VERSIONS, TERMS_VERSIONS, SINGLE_SCOPE_VERSIONS, TYPED_VERSIONS, TIER_VERSIONS, SEMANTIC_VERSIONS)
+    if versions == COMPLETENESS_VERSIONS:
+        scoped = True
+        resolved, facts, coverage, selection_audit, binding = resolve_completeness_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == BINDING_VERSIONS:
+        scoped = True
+        resolved, facts, coverage, selection_audit, binding = resolve_binding_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == NATURE_VERSIONS:
+        scoped = True
+        resolved, facts, coverage, selection_audit, binding = resolve_nature_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == ROLE_VERSIONS:
+        scoped = True
+        resolved, facts, coverage, selection_audit, binding = resolve_role_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == FIELD_VERSIONS:
+        scoped = True
+        resolved, facts, coverage, selection_audit, binding = resolve_field_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == EXPLICIT_VERSIONS:
+        scoped = True
+        resolved, facts, coverage, selection_audit, binding = resolve_integrated_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == SEMANTIC_VERSIONS:
+        resolved, facts, coverage, selection_audit, binding = resolve_semantic_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == TIER_VERSIONS:
+        resolved, facts, coverage, selection_audit, binding = resolve_tier_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == TYPED_VERSIONS:
+        resolved, facts, coverage, selection_audit, binding = resolve_typed_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == SINGLE_SCOPE_VERSIONS:
+        resolved, facts, coverage, selection_audit, binding = resolve_scope_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == TERMS_VERSIONS:
+        resolved, facts, coverage, selection_audit, binding = resolve_terms_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == ECONOMIC_VERSIONS:
+        resolved, facts, coverage, selection_audit, binding = resolve_economic_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == LINKED_VERSIONS:
+        resolved, facts, coverage, selection_audit, binding = resolve_linked_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == PASSAGE_VERSIONS:
+        resolved, facts, coverage, selection_audit, binding = resolve_passage_draft(packet, request, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == READABLE_VERSIONS:
+        validate_readable_request(packet, request)
+        resolved, facts, coverage, selection_audit, binding = resolve_readable_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == SUPPORT_VERSIONS:
+        validate_support_request(packet, request)
+        resolved, facts, coverage, selection_audit, binding = resolve_support_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == SUBJECT_VERSIONS:
+        validate_subject_request(packet, request)
+        resolved, facts, coverage, selection_audit, binding = resolve_subject_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == GAP_VERSIONS:
+        validate_gap_request(packet, request)
+        resolved, facts, coverage, selection_audit, binding = resolve_gap_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == CONTEXT_VERSIONS:
+        validate_context_request(packet, request)
+        resolved, facts, coverage, selection_audit, binding = resolve_context_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif versions == BOUNDED_VERSIONS:
+        validate_bounded_request(packet, request)
+        resolved, facts, coverage, selection_audit = resolve_bounded_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif scoped:
+        resolved, facts, coverage, selection_audit = resolve_scoped_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif (request['implementation_version'], request['prompt_version']) == COVERAGE_VERSIONS:
+        resolved, facts, coverage, selection_audit = resolve_coverage_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif (request['implementation_version'], request['prompt_version']) == SELECTION_VERSIONS:
+        resolved, facts = resolve_selected_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    elif (request['implementation_version'], request['prompt_version']) == FACT_VERSIONS:
+        resolved, facts = resolve_draft(packet, texts[0])
+        draft = ModelDraft.model_validate(resolved)
+    else:
+        draft = ModelDraft.model_validate_json(texts[0])
     sources = {source['source_id']: source['text'] for source in packet['sources']}
     claims = []
-    for claim in draft.claims:
+    for index, claim in enumerate(draft.claims):
         citations = []
-        for cite in claim.citations:
+        for cite_index, cite in enumerate(claim.citations):
             text = sources.get(cite.source_id, '')
-            start = text.find(cite.quote)
-            if not cite.quote or start < 0 or text.find(cite.quote, start + 1) >= 0:
-                raise ReviewBlocked('QUOTE_MISSING_OR_AMBIGUOUS')
+            if scoped:
+                # Locally derived exact offsets, never supplied by the model.
+                span = selection_audit['claims'][index]['spans'][cite_index]
+                start = span['start']
+                if (span['source_id'] != cite.source_id or span['quote'] != cite.quote
+                        or not cite.quote or start < 0 or span['end'] != start + len(cite.quote)
+                        or text[start:span['end']] != cite.quote):
+                    raise ReviewBlocked('ANCHORED_CITATION_MISMATCH')
+            else:
+                start = text.find(cite.quote)
+                if not cite.quote or start < 0 or text.find(cite.quote, start + 1) >= 0:
+                    raise ReviewBlocked('QUOTE_MISSING_OR_AMBIGUOUS')
             citations.append(dict(source_id=cite.source_id, quote=cite.quote, start=start, end=start+len(cite.quote)))
         claims.append(dict(criterion=claim.criterion, assessment=claim.assessment,
                            rationale=claim.rationale, citations=citations))
@@ -196,8 +456,21 @@ def parse_response(packet, request, response, reviewed_at):
             'Automated research draft only; semantic correctness has not been independently established.',
             'Captured evidence is not a prospective approval; no trade handoff is permitted.'])
     artifact = validate_draft(packet, review, reviewed_at)
-    return {'request_id': request['request_id'], 'provider_response_id': response['id'],
+    result = {'request_id': request['request_id'], 'provider_response_id': response['id'],
         'requested_model': request['body']['model'], 'returned_model': response['model'],
         'prompt_version': request['prompt_version'], 'masters_digest': request['masters_digest'],
         'usage': deepcopy(response.get('usage')), 'review_artifact': artifact,
         'admission': 'RESEARCH_ONLY', 'eligible_for_handoff': False}
+    if facts is not None:
+        result['fact_findings'] = facts
+        result['research_scope'] = 'DOCUMENT_FACTS_AND_CATALYST_ONLY'
+    if coverage is not None:
+        result['materiality_evidence_coverage'] = coverage
+        result['citation_selection_audit'] = selection_audit
+    if binding is not None:
+        result['research_binding'] = binding
+        if versions in (TERMS_VERSIONS, SINGLE_SCOPE_VERSIONS, TYPED_VERSIONS, TIER_VERSIONS, SEMANTIC_VERSIONS, EXPLICIT_VERSIONS, FIELD_VERSIONS, ROLE_VERSIONS, NATURE_VERSIONS, BINDING_VERSIONS, COMPLETENESS_VERSIONS):
+            # Required economic presentation; the short research narrative alone
+            # is not the full result. Retain even unresolved inventory states.
+            result['economic_summary'] = deepcopy(binding['economic_inventory']['summary'])
+    return result

@@ -16,6 +16,14 @@ Purpose: remove routine dependence on the user's live availability while preserv
 
 - Assemble an isolated, explicitly labelled evaluation set covering supported, failed, conflicting and unresolved cases. Include old-news republication, unrelated same-symbol filings, syndicated duplicates, incomplete macro calendars, stale/wrong-feed measurements, missing targets, missed triggers and changed context. Preserve disagreements and all source snapshots.
 - Have an independent source-backed assessment judge the actual claims, not just JSON validity or citation existence. Avoid circular agreement obtained from the same model/prompt twice. Record the assessor and any independence limitations.
+- Freeze source-backed expectations before dispatch for fresh-case evaluations.
+  Supply evaluators with complete original source objects **and the full non-source
+  model context in a separately identified section**, including captured flags,
+  authority revisions, instructions, schema and implementation versions. Captured
+  configuration is not proof of current live configuration. Preserve any later
+  context disclosure/correction as an attributable addendum, never rewrite the
+  original reference. Separate AI review shares model limitations and is not
+  independent human validation. Exact passage matching is not semantic acceptance.
 - Evaluate catalyst, setup and confirmation separately. Report disagreements, unsupported positives, abstentions and data-coverage failures with denominators. Do not invent a passing accuracy percentage or allow profitable outcomes to excuse rule violations.
 - Historical fixtures establish infrastructure behavior and review agreement only. They create no retrospective entries, fills, Strategy #1 opportunities or executed-trade sample observations.
 - Any proposed numerical definition, freshness duration or changed observation eligibility requires the governing master's appropriate version control. A model may not invent those policies. Operational review can remain unresolved when current rules do not support a reproducible conclusion.

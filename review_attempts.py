@@ -5,7 +5,7 @@ from pathlib import Path
 import sqlite3
 
 from evidence_review import canonical, digest, unresolved_draft, validate_draft
-from research_reviewer import ReviewBlocked, parse_response, compact_request, evidence_message
+from research_reviewer import ReviewBlocked, parse_response, compact_request, request_evidence_message
 
 
 def utc_now():
@@ -82,11 +82,71 @@ class AttemptLedger:
 
 
 def execute_once(ledger, packet, request, provider, clock=utc_now):
+    from research_completeness import VERSIONS as COMPLETENESS_VERSIONS, validate_completeness_request
+    if (request.get('implementation_version'), request.get('prompt_version')) == COMPLETENESS_VERSIONS:
+        validate_completeness_request(packet, request)
+    from research_binding import VERSIONS as BINDING_VERSIONS, validate_binding_request
+    if (request.get('implementation_version'), request.get('prompt_version')) == BINDING_VERSIONS:
+        validate_binding_request(packet, request)
+    from research_nature import VERSIONS as NATURE_VERSIONS, validate_nature_request
+    if (request.get('implementation_version'), request.get('prompt_version')) == NATURE_VERSIONS:
+        validate_nature_request(packet, request)
+    from research_roles import VERSIONS as ROLE_VERSIONS, validate_role_request
+    if (request.get('implementation_version'), request.get('prompt_version')) == ROLE_VERSIONS:
+        validate_role_request(packet, request)
+    from research_fields import VERSIONS as FIELD_VERSIONS, validate_field_request
+    if (request.get('implementation_version'), request.get('prompt_version')) == FIELD_VERSIONS:
+        validate_field_request(packet, request)
+    from research_explicit import VERSIONS as EXPLICIT_VERSIONS, validate_integrated_request
+    if (request.get('implementation_version'), request.get('prompt_version')) == EXPLICIT_VERSIONS:
+        validate_integrated_request(packet, request)
     validate_draft(packet, unresolved_draft(packet, clock()), clock())
     if packet['packet_id'] != request['packet_id']:
         raise ReviewBlocked('REQUEST_PACKET_MISMATCH')
-    if request['body']['input'][-1] != evidence_message(packet, compact_request(request)):
+    if request['body']['input'][-1] != request_evidence_message(packet, request):
         raise ReviewBlocked('REQUEST_EVIDENCE_MISMATCH')
+    from research_bounded import VERSIONS as BOUNDED_VERSIONS, validate_bounded_request
+    if (request['implementation_version'], request['prompt_version']) == BOUNDED_VERSIONS:
+        validate_bounded_request(packet, request)
+    from research_context import VERSIONS as CONTEXT_VERSIONS, validate_context_request
+    if (request['implementation_version'], request['prompt_version']) == CONTEXT_VERSIONS:
+        validate_context_request(packet, request)
+    from research_gaps import VERSIONS as GAP_VERSIONS, validate_gap_request
+    if (request['implementation_version'], request['prompt_version']) == GAP_VERSIONS:
+        validate_gap_request(packet, request)
+    from research_subjects import VERSIONS as SUBJECT_VERSIONS, validate_subject_request
+    if (request['implementation_version'], request['prompt_version']) == SUBJECT_VERSIONS:
+        validate_subject_request(packet, request)
+    from research_support import VERSIONS as SUPPORT_VERSIONS, validate_support_request
+    if (request['implementation_version'], request['prompt_version']) == SUPPORT_VERSIONS:
+        validate_support_request(packet, request)
+    from research_readable import VERSIONS as READABLE_VERSIONS, validate_readable_request
+    if (request['implementation_version'], request['prompt_version']) == READABLE_VERSIONS:
+        validate_readable_request(packet, request)
+    from research_passages import VERSIONS as PASSAGE_VERSIONS, validate_passage_request
+    from research_linked import VERSIONS as LINKED_VERSIONS, validate_linked_request
+    from research_economic import VERSIONS as ECONOMIC_VERSIONS, validate_economic_request
+    from research_terms import VERSIONS as TERMS_VERSIONS, validate_terms_request
+    from research_scope import VERSIONS as SINGLE_SCOPE_VERSIONS, validate_scope_request
+    from research_tiers import VERSIONS as TIER_VERSIONS, validate_tier_request
+    from research_semantics import VERSIONS as SEMANTIC_VERSIONS, validate_semantic_request
+    if (request['implementation_version'], request['prompt_version']) == SEMANTIC_VERSIONS:
+        validate_semantic_request(packet, request)
+    if (request["implementation_version"], request["prompt_version"]) == TIER_VERSIONS:
+        validate_tier_request(packet, request)
+    from research_typed import VERSIONS as TYPED_VERSIONS, validate_typed_request
+    if (request['implementation_version'], request['prompt_version']) == TYPED_VERSIONS:
+        validate_typed_request(packet, request)
+    if (request['implementation_version'], request['prompt_version']) == SINGLE_SCOPE_VERSIONS:
+        validate_scope_request(packet, request)
+    if (request['implementation_version'], request['prompt_version']) == TERMS_VERSIONS:
+        validate_terms_request(packet, request)
+    if (request['implementation_version'], request['prompt_version']) == ECONOMIC_VERSIONS:
+        validate_economic_request(packet, request)
+    if (request['implementation_version'], request['prompt_version']) == LINKED_VERSIONS:
+        validate_linked_request(packet, request)
+    if (request['implementation_version'], request['prompt_version']) == PASSAGE_VERSIONS:
+        validate_passage_request(packet, request)
     claimed = ledger.claim(request, clock())
     history = ledger.events(request['request_id'])
     if 'COMPLETED' in history:
@@ -100,6 +160,9 @@ def execute_once(ledger, packet, request, provider, clock=utc_now):
         raise ReviewBlocked('AMBIGUOUS_ATTEMPT_NO_RETRY')
     if claimed:
         try:
+            metadata = getattr(provider, 'transport_metadata', None)
+            if callable(metadata):
+                ledger.record(request['request_id'], 'TRANSPORT_CONFIGURED', metadata(), clock())
             response = provider.respond(request['body'])
             ledger.record(request['request_id'], 'RECEIVED', response, clock())
         except Exception:
