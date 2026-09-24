@@ -19,11 +19,13 @@ def field_review(packet, request, response, received_at, reference):
     from research_roles import VERSIONS as ROLE_VERSIONS, validate_role_request, role_checklist
     from research_nature import VERSIONS as NATURE_VERSIONS, validate_nature_request, nature_checklist
     from research_binding import VERSIONS as BINDING_VERSIONS, validate_binding_request, binding_checklist
+    from research_completeness import VERSIONS as COMPLETENESS_VERSIONS, validate_completeness_request, completeness_checklist
     versions = (request.get('implementation_version'), request.get('prompt_version'))
     projected_response = response
-    if versions in (ROLE_VERSIONS, NATURE_VERSIONS, BINDING_VERSIONS):
-        nature_request = validate_binding_request(packet, request)[1] if versions == BINDING_VERSIONS else request
-        role_request = validate_nature_request(packet, nature_request)[1] if versions in (NATURE_VERSIONS, BINDING_VERSIONS) else request
+    if versions in (ROLE_VERSIONS, NATURE_VERSIONS, BINDING_VERSIONS, COMPLETENESS_VERSIONS):
+        binding_request = validate_completeness_request(packet, request)[1] if versions == COMPLETENESS_VERSIONS else request
+        nature_request = validate_binding_request(packet, binding_request)[1] if versions in (BINDING_VERSIONS, COMPLETENESS_VERSIONS) else request
+        role_request = validate_nature_request(packet, nature_request)[1] if versions in (NATURE_VERSIONS, BINDING_VERSIONS, COMPLETENESS_VERSIONS) else request
         _, field_request = validate_role_request(packet, role_request)
         _, previous = validate_field_request(packet, field_request)
         # Projection is for the frozen v21 exporter only. The report below
@@ -34,7 +36,7 @@ def field_review(packet, request, response, received_at, reference):
                 for part in message.get('content', []):
                     if part.get('type') == 'output_text':
                         raw = json.loads(part['text'])
-                        part['text'] = canonical({k:v for k,v in raw.items() if k not in ('meaning_contract','term_classifications','materiality_term_indices','materiality_clause_roles')})
+                        part['text'] = canonical({k:v for k,v in raw.items() if k not in ('meaning_contract','term_classifications','materiality_term_indices','materiality_clause_roles','economic_source_coverage')})
     elif versions == VERSIONS:
         _, previous = validate_field_request(packet, request)
     elif versions == PREVIOUS:
@@ -49,7 +51,7 @@ def field_review(packet, request, response, received_at, reference):
         contract_report=deepcopy(result['research_binding']['explicit_response_contract']))
     for item in report['items']:
         item['item_id'] = digest(dict(request_id=request['request_id'], path=item['path'], kind=item['kind'], anchor=item.get('anchor')))
-    if versions in (ROLE_VERSIONS, NATURE_VERSIONS, BINDING_VERSIONS):
+    if versions in (ROLE_VERSIONS, NATURE_VERSIONS, BINDING_VERSIONS, COMPLETENESS_VERSIONS):
         contract = result['research_binding']['explicit_response_contract']
         report.update(implementation_version='1.1.0-condition-context-review',
             original_provider_response=deepcopy(response),original_draft=deepcopy(contract['original_draft']),
@@ -61,6 +63,9 @@ def field_review(packet, request, response, received_at, reference):
         elif versions == BINDING_VERSIONS:
             report['implementation_version'] = '1.3.0-summary-binding-review'
             report['field_items'] = binding_checklist(report['original_draft'],request['request_id'])
+        elif versions == COMPLETENESS_VERSIONS:
+            report['implementation_version'] = '1.4.0-source-coverage-review'
+            report['field_items'] = completeness_checklist(report['original_draft'],request['request_id'])
     else:
         report['field_items'] = field_checklist(report['original_draft'], request['request_id'])
     report['items'].extend(deepcopy(report['field_items']))
