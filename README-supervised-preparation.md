@@ -1,5 +1,59 @@
 # Supervised preparation, with human decisions
 
+Version 1.1 adds optional source-bound catalyst briefs and twelve saveable review questions.
+
+## Catalyst briefs and review notes
+
+Optional authored briefs separate event facts, management forecasts, economic
+interpretation, timing, contrary evidence, limitations and proposed tier. Exact source
+passages and author source-check notes are expandable. Proposed tiers never qualify a
+candidate. The page displays attribution, actual review time and that independent
+acceptance/current approval are not established.
+
+Add `--briefs briefs.json` to the command below for a JSON list conforming to
+`catalyst_brief.Brief`. Start from a preparation without briefs to obtain its identities.
+Briefs must bind the same packet, symbol, complete trace, classification and snapshot
+digest. Exact citation offsets must reproduce the supplied excerpt in a captured source
+record's string field. Every claim must be displayed in the five required sections.
+Authorship/check times must follow capture and not exceed preparation time. Unknown
+fields (including approval flags), bad lineage, missing passages and duplicates reject.
+The full funnel is retained and missing briefs remain explicitly absent.
+
+The twelve questions accept Supported, Unclear or Fails with a reason/evidence reference,
+or Unanswered. Review downloads bind packet, brief, preparation and source identities.
+No risk calculation is needed to save review notes. Changing candidates clears answers.
+Notes never become CurrentReview approvals, trigger confirmations, signals or orders.
+
+This validates structure and source locations, **not truth, source independence,
+authenticity of a claimed reviewer identity or semantic completeness**. A false inference
+can cite a real passage; that limitation is explicitly tested. This first version accepts
+only attributed author source checks. No model call is made by the page generator.
+Historical examples stay outside prospective Strategy #1 evidence.
+
+### Version 1.1 validation
+
+- 162 focused Python tests passed across catalyst-brief, preparation, code-review,
+  evidence-review and Journal modules. Covered attribution/chronology, source binding,
+  missing claims, unsafe links, untrusted HTML, history and unchanged no-execution limits.
+- Nine JavaScript tests passed, including simulated-DOM event handling: review downloads
+  retain the correct candidate/brief identity; unanswered questions remain unanswered;
+  changing candidates clears answers; answered questions without reasons block download.
+- The historical ADMA example has nine source-linked claims, twelve unanswered questions,
+  INFRASTRUCTURE_TEST classification, zero Journal rows and no prices or simulated fills.
+  The preserved source body hash and extracted text were verified before use. The brief's
+  source check was performed by its author, not an independent reviewer. Same-event
+  independent corroboration remains explicitly unresolved.
+- The browser was unavailable during version 1.1 acceptance. Visual layout and actual
+  browser filesystem downloads remain unverified; simulated-DOM checks are not browser
+  acceptance. Earlier browser observations below apply only to version 1.0.
+
+Run `python -m pytest -q tests/test_catalyst_brief.py tests/test_supervised_preparation.py tests/test_code_review.py tests/test_evidence_review.py tests/test_journal.py`
+and `node --test tests/test_supervised_preparation.cjs`. Initial sandbox runs hit Windows
+temporary-folder/subprocess restrictions; the approved outside-sandbox reruns passed.
+
+No paid model call, deployment, service resume, Journal write, strategy/master change or
+broker action occurred. The three living-master revisions were rechecked and unchanged.
+
 This adds an on-demand local preparation page around the existing discovery snapshot,
 source checks and process-Journal projections. It replaces repetitive compilation and
 risk arithmetic with one command. It is not unattended trading or a new strategy evaluator.
@@ -84,7 +138,7 @@ Strategy v0.3 / Experiment v0.5 methodology and observation eligibility are unch
 Automated execution remains Phase 1 SHADOW and disabled. No production deployment, service
 resume, schema migration, paid call, live Sheet write or broker operation is part of this change.
 
-## Verification
+## Original version 1.0 verification
 
 ```text
 python -m pytest -q tests/test_supervised_preparation.py tests/test_code_review.py tests/test_evidence_review.py tests/test_journal.py

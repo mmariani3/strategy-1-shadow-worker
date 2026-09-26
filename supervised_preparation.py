@@ -15,10 +15,11 @@ from evidence_pipeline import load_snapshot, write_once
 from evidence_review import AUTHORITIES, aware, build_packets, canonical, check_authorities, digest
 from journal_projection import project_run
 from review_contract import MARKET_TZ
+from catalyst_brief import attach_briefs, render_brief
 
-VERSION = "1.0.0-supervised-preparation"
+VERSION = "1.1.0-supervised-preparation"
 FILES = ("supervised_preparation.py", "supervised_preparation.js", "code_review.py",
-         "evidence_review.py", "evidence_pipeline.py", "journal_projection.py", "review_contract.py")
+         "evidence_review.py", "evidence_pipeline.py", "journal_projection.py", "review_contract.py", "catalyst_brief.py")
 # A changed governing revision requires deliberate review of this calculator contract.
 STRATEGY_REVISION = "ANLCKQlpoauv4o_e_Ut3p4XGlBvaAjNqPrikkRGldDjpjirxqWxq8jeKFBdoJpuq2ul5Bvlh26vWGhdcyzzyfSE2tqOMCcqtEE1IX8nDOqs"
 LIMITS = {"max_risk": "50", "max_notional": "10000", "max_daily_loss": "100",
@@ -30,7 +31,7 @@ def implementation():
                                         for name in FILES})
 
 
-def prepare(snapshot, authorities, authority_checks, now):
+def prepare(snapshot, authorities, authority_checks, now, briefs=None):
     """Keep source capture time separate from generation and master-recheck times."""
     check_authorities(authorities, snapshot["captured_at"])
     check_authorities(authority_checks, now)
@@ -74,7 +75,7 @@ def prepare(snapshot, authorities, authority_checks, now):
         "journal_draft": {"status": "DRAFT_REQUIRES_LIVE_RECONCILIATION", "live_sheet_read": False,
                           "rows": rows, "executed_trade_rows": []}}
     report["preparation_id"] = digest(report)
-    return report
+    return attach_briefs(report, [] if briefs is None else briefs, now)
 
 
 def text_block(value):
@@ -110,12 +111,14 @@ def render(report):
                            + "<p>" + escape(source["timestamp_semantics"]) + "</p>"
                            + text_block(source["raw"]) + "<small>Source ID: " + escape(source["source_id"])
                            + "</small></details>")
-        cards.append(f'<details class="candidate" data-index="{i}"><summary>'
+        opened = ' open' if len(report['candidates']) == 1 and candidate.get('catalyst_brief') else ''
+        cards.append(f'<details class="candidate" data-index="{i}"{opened}><summary>'
                      + escape(candidate["symbol"]) + " · " + escape(candidate["source_state"])
                      + " (captured state)</summary><p><strong>Current approval: not established.</strong></p>"
                      + ("<p>Captured rejection: " + escape(str(candidate["rejection_reason"])) + "</p>"
                         if candidate["rejection_reason"] else "")
-                     + "<h3>Research digest</h3>" + source_digest(candidate["sources"])
+                     + render_brief(candidate)
+                     + "<h3>Captured source digest</h3>" + source_digest(candidate["sources"])
                      + "<details><summary>Unresolved checks</summary>" + text_block(candidate["unresolved"]) + "</details>"
                      + "<details><summary>Full captured evidence and source identifiers</summary>" + "".join(sources) + "</details>"
                      + "<details><summary>Arithmetic and input checks at capture</summary>"
@@ -130,6 +133,11 @@ def render(report):
                      for key, label in (("entry", "Planned entry ($)"), ("stop", "Structural stop ($)"),
                                         ("target", "Planned target ($)"), ("budget", "Chosen risk budget ($; at most 50)"),
                                         ("loss", "Realized daily loss ($)"), ("trades", "Executed trades today")))
+    questions = "".join('<fieldset><legend>' + escape(q['question']) + '</legend>'
+        + '<label>Answer<select id="review-' + q['id'] + '"><option value="UNANSWERED">Unanswered</option>'
+        + '<option value="SUPPORTED">Supported</option><option value="UNCLEAR">Unclear</option>'
+        + '<option value="FAILS">Fails</option></select></label><label>Reason and evidence reference'
+        + '<textarea id="reason-' + q['id'] + '"></textarea></label></fieldset>' for q in report['review_questions'])
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-{script_hash}'; style-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
@@ -138,6 +146,7 @@ body{{font:16px/1.5 system-ui,sans-serif;background:#f3f6f8;color:#172d3b;margin
 h1{{font-size:30px;line-height:1.2}}h2{{font-size:23px}}section,details.candidate{{background:white;border:1px solid #d6e1e7;border-radius:12px;padding:20px;margin:18px 0}}
 .notice{{border-left:5px solid #ba7616;background:#fff2db;padding:16px}}.muted,small{{color:#49606f}}summary{{cursor:pointer;font-weight:650;padding:8px 0}}
 pre{{white-space:pre-wrap;overflow-wrap:anywhere;background:#f2f5f7;padding:12px;border-radius:6px;font-size:13px}}details details{{border-top:1px solid #ddd;padding:10px}}
+fieldset{{border:1px solid #d6e1e7;border-radius:8px;margin:16px 0;padding:14px;min-width:0}}legend{{font-weight:600}}blockquote{{border-left:3px solid #9aacb7;margin:12px 0;padding-left:14px;white-space:pre-wrap;overflow-wrap:anywhere}}.brief small{{overflow-wrap:anywhere}}
 label{{display:block}}input,select,textarea,button{{font:inherit;padding:10px;border:1px solid #9aacb7;border-radius:6px;box-sizing:border-box;width:100%}}
 .grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}}button{{background:#155b6a;color:white;cursor:pointer;margin-top:12px;width:auto}}button:disabled{{opacity:.45;cursor:default}}textarea{{min-height:100px}}a{{color:#155b6a}}#candidates{{max-height:38rem;overflow:auto}}article{{border-left:3px solid #ccdce4;padding-left:14px;margin:20px 0}}@media print{{button{{display:none}}#candidates{{max-height:none;overflow:visible}}}}
 </style></head><body><main>
@@ -160,6 +169,13 @@ Historical source states and arithmetic are not current trading permissions.</di
 <label>Market-data source and timestamp; setup reasoning; unresolved questions<textarea id="notes"></textarea></label>
 <button id="save-plan" type="button" disabled>Save planning draft</button>
 <p id="save-status">Drafts are not saved automatically. Saving downloads a local JSON file; it does not journal or approve a trade.</p></section>
+<section id="setup-review"><h2>Save your setup-review questions</h2>
+<p id="review-subject">Select a candidate in risk planning above. Reviewing does not require risk inputs or a calculation.</p>
+<p>Use Supported, Unclear or Fails with a reason and evidence reference. Unanswered questions remain unanswered. These are draft notes, not qualification or trigger confirmation. Changing candidates clears the answers.</p>
+<label>Reviewer's name<input id="review-name" autocomplete="off"></label>
+<details><summary>Open the 12 review questions</summary>{questions}</details>
+<button id="save-review" type="button">Save review draft</button>
+<p id="review-status">Answers are not saved automatically. No order or Journal action.</p></section>
 <section id="journal"><h2>3. Review the draft Journal records</h2><p>Status: draft only. The live Sheet has not been read or changed. Reconcile stable IDs against the live Journal before any delivery through the approved writer.</p>
 <p>{len(report['journal_draft']['rows'])} proposed process records; zero executed-trade records.</p>
 <details><summary>Inspect draft rows</summary>{text_block(report['journal_draft'])}</details>
@@ -191,6 +207,7 @@ def main():
     parser.add_argument("--authority-checks", type=Path, required=True, help="Explicit living-master revision rechecks")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--prepared-at", help="Fixed timestamp for reproducible replay; not a freshness approval")
+    parser.add_argument("--briefs", type=Path, help="Optional JSON list of attributed, source-bound research briefs")
     args = parser.parse_args()
     if args.snapshot:
         snapshot = json.loads(args.snapshot.read_text(encoding="utf-8"))
@@ -201,7 +218,8 @@ def main():
             snapshot = load_snapshot(conn, args.run_id)
     report = prepare(snapshot, json.loads(args.authorities.read_text(encoding="utf-8")),
                      json.loads(args.authority_checks.read_text(encoding="utf-8")),
-                     args.prepared_at or datetime.now(timezone.utc).isoformat())
+                     args.prepared_at or datetime.now(timezone.utc).isoformat(),
+                     json.loads(args.briefs.read_text(encoding="utf-8")) if args.briefs else None)
     print(json.dumps({"status": "PREPARATION_ONLY", "page": str(save(report, args.output)),
                       "candidates": len(report["candidates"]), "model_calls": 0, "external_writes": 0}))
 

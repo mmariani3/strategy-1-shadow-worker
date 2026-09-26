@@ -60,7 +60,31 @@ const PilotPreparation = (() => {
       entered_by: reviewer.trim(), recorded_at: savedAt, notes: notes.trim(), inputs: {...input},
       arithmetic: calculate(input, report.risk_limits)};
   }
-  return {calculate, planningDraft};
+  function reviewDraft(report, candidateIndex, answers, reviewer, savedAt) {
+    const candidate = report.candidates[candidateIndex];
+    if (!Number.isInteger(candidateIndex) || !candidate) throw new Error("Select a candidate.");
+    if (typeof reviewer !== "string" || !reviewer.trim()) throw new Error("Add the reviewer's name.");
+    if (!Number.isFinite(Date.parse(savedAt))) throw new Error("Invalid draft timestamp.");
+    const questionIds = report.review_questions.map(q => q.id);
+    if (!answers || Object.keys(answers).length !== questionIds.length || Object.keys(answers).some(k => !questionIds.includes(k)))
+      throw new Error("Answers must match this preparation's questions.");
+    const records = report.review_questions.map(q => {
+      const a = answers[q.id];
+      if (!a || !['UNANSWERED','SUPPORTED','UNCLEAR','FAILS'].includes(a.answer) || typeof a.reason !== 'string')
+        throw new Error("Invalid review answer.");
+      if (a.answer !== 'UNANSWERED' && !a.reason.trim()) throw new Error("Add a reason and evidence reference for each answered question.");
+      return {question_id:q.id, question:q.question, answer:a.answer, reason:a.reason.trim()};
+    });
+    return {schema_version:1, classification:'HUMAN_REVIEW_DRAFT', eligible_for_handoff:false,
+      execution_enabled:false, journaled:false, current_approval:'NOT_ESTABLISHED', trigger_confirmation:'NOT_ESTABLISHED',
+      preparation_id:report.preparation_id, implementation_version:report.implementation_version,
+      question_version:report.review_question_version, packet_id:candidate.packet_id,
+      catalyst_brief_id:candidate.catalyst_brief?.brief_id || null, trace:{...candidate.trace}, symbol:candidate.symbol,
+      source_experiment_class:report.experiment_class, source_context:report.source_context,
+      source_snapshot_digest:report.source_snapshot_digest, source_captured_at:report.source_captured_at,
+      entered_by:reviewer.trim(), recorded_at:savedAt, answers:records};
+  }
+  return {calculate, planningDraft, reviewDraft};
 })();
 if (typeof module !== "undefined") module.exports = PilotPreparation;
 
@@ -99,6 +123,14 @@ if (typeof document !== "undefined") {
   byId("candidate").addEventListener("change", () => {
     // Avoid carrying another symbol's stop/target, notes or account assumptions across selections.
     for (const key of [...keys, "notes"]) byId(key).value = "";
+    for (const q of report.review_questions) {
+      byId('review-' + q.id).value = 'UNANSWERED';
+      byId('reason-' + q.id).value = '';
+    }
+    const candidate = report.candidates[Number(byId('candidate').value)];
+    byId('review-subject').textContent = byId('candidate').value === '' ? 'Select a candidate above.' :
+      'Reviewing ' + candidate.symbol + ' · ' + candidate.packet_id + '. Source: ' + report.source_context;
+    byId('review-status').textContent = 'Answers cleared for candidate change. No review saved.';
     invalidate();
   });
   byId("calculate").addEventListener("click", () => {
@@ -117,6 +149,22 @@ if (typeof document !== "undefined") {
     link.href = url; link.download = name; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+  for (const q of report.review_questions) {
+    for (const prefix of ['review-', 'reason-']) byId(prefix + q.id).addEventListener('input', () => {
+      byId('review-status').textContent = 'Unsaved review changes. No approval or Journal action.';
+    });
+  }
+  byId('save-review').addEventListener('click', () => {
+    try {
+      if (byId('candidate').value === '') throw new Error('Select a candidate above.');
+      const answers = Object.fromEntries(report.review_questions.map(q => [q.id,
+        {answer:byId('review-' + q.id).value, reason:byId('reason-' + q.id).value}]));
+      const draft = PilotPreparation.reviewDraft(report, Number(byId('candidate').value), answers,
+        byId('review-name').value, new Date().toISOString());
+      download(draft, 'review-draft-' + draft.recorded_at.replace(/[:.]/g, '-') + '.json');
+      byId('review-status').textContent = 'Download requested. Confirm the file was saved. Answers are draft notes, not approval.';
+    } catch (error) { byId('review-status').textContent = error.message; }
+  });
   saveButton.addEventListener("click", () => {
     try {
       if (byId("candidate").value === "") throw new Error("Select a candidate.");
