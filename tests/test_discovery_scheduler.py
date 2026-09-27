@@ -1,6 +1,8 @@
 from copy import deepcopy
 from datetime import date, datetime, timezone
 from types import SimpleNamespace
+import ast
+import inspect
 import json
 
 import pytest
@@ -9,6 +11,7 @@ from fastapi.testclient import TestClient
 
 import discovery_scheduler as s
 import discovery_coordinator as d
+from discovery_alerts import OUTCOMES, response_for
 
 UTC = timezone.utc
 NOW = datetime(2026, 9, 28, 13, 0, 20, tzinfo=UTC)
@@ -297,3 +300,82 @@ def test_audit_requires_explicit_expected_scan_time(wired, monkeypatch, capsys):
     monkeypatch.delenv("SCAN_LOCAL_MINUTE")
     assert s.main() == 2 and wired["posts"] == 0
     assert output(capsys)[-1]["outcome"] == "CONFIGURATION_ERROR"
+
+
+def test_all_scheduler_outcomes_have_explicit_operator_guidance():
+    # A newly introduced event must be deliberately classified, not silently
+    # inherit a reassuring generic message in future changes.
+    tree = ast.parse(inspect.getsource(s))
+    emitted = {n.args[0].value for n in ast.walk(tree)
+               if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+               and n.func.id == "emit" and n.args and isinstance(n.args[0], ast.Constant)}
+    assert emitted == set(OUTCOMES)
+
+
+@pytest.mark.parametrize("status,category,timing", [
+    ("PARTIAL", "RESEARCH_REVIEW", "BEFORE_USE"),
+    ("IN_PROGRESS", "RECONCILE", "BEFORE_RELIANCE"),
+    ("FAILED", "MAINTENANCE", "BEFORE_RELIANCE"),
+    ("COMPLETE", "INFO", "NONE")])
+def test_saved_run_alerts_preserve_result_and_never_retry(wired, capsys, status, category, timing):
+    wired["run"] = record(status)
+    expected = deepcopy(wired["run"])
+    assert s.main() == (0 if status == "COMPLETE" else 1)
+    event = output(capsys)[-1]
+    assert event["run_key"] == KEY and event["run_id"] == "local-run"
+    advice = event["response"]
+    assert advice["category"] == category and advice["user_action_timing"] == timing
+    assert advice["event_stage"] == "FINAL" and advice["advisory_only"] is True
+    assert advice["scope"] == "DISCOVERY_ONLY"
+    assert wired["posts"] == 0 and wired["run"] == expected
+
+
+def test_missed_scan_does_not_demand_immediate_recovery(wired, monkeypatch, capsys):
+    monkeypatch.setenv("SCHEDULER_ACTION", "AUDIT")
+    assert s.main() == 1
+    advice = output(capsys)[-1]["response"]
+    assert advice["category"] == "MISSED_SCAN"
+    assert advice["user_action_timing"] == "WHEN_CONVENIENT"
+    assert "do not chase" in advice["user_action"]
+    assert wired["posts"] == 0
+
+
+def test_safety_failure_is_not_treated_as_harmless_skip(wired, monkeypatch, capsys):
+    monkeypatch.setattr(s, "health", lambda c: False)
+    assert s.main() == 1
+    advice = output(capsys)[-1]["response"]
+    assert advice["category"] == "MAINTENANCE"
+    assert advice["user_action_timing"] == "BEFORE_RELIANCE"
+    assert "does not pause future jobs" in advice["scope_note"]
+    assert wired["posts"] == 0 and not wired["queries"]
+
+
+def test_ambiguous_submission_advises_read_only_reconciliation(wired, monkeypatch, capsys):
+    def timeout(*a, **kw):
+        wired["posts"] += 1
+        raise requests.Timeout("private-token")
+    monkeypatch.setattr(s.requests, "post", timeout)
+    assert s.main() == 1
+    events = output(capsys)
+    assert events[0]["response"]["event_stage"] == "INTERMEDIATE"
+    assert events[-1]["response"]["event_stage"] == "FINAL"
+    assert events[-1]["response"]["category"] == "RECONCILE"
+    assert "read-only" in events[-1]["response"]["user_action"]
+    assert "Do not resubmit" in events[-1]["response"]["user_action"]
+    assert wired["posts"] == 1 and len(wired["queries"]) == 2
+    assert "private-token" not in str(events)
+
+
+def test_unknown_event_cannot_emit_success_or_override_response(capsys):
+    assert s.emit("FUTURE_UNRECOGNIZED_EVENT", 0, response={"category": "INFO"}, exit_code=0) == 1
+    event = output(capsys)[0]
+    assert event["exit_code"] == 1
+    assert event["response"]["category"] == "MAINTENANCE"
+    assert event["response"]["user_action_timing"] == "BEFORE_RELIANCE"
+    assert "No completion or safety action can be inferred" in event["response"]["scheduler_action"]
+
+
+def test_guidance_does_not_retain_mutated_payloads():
+    advice = response_for("RUN_UNFINISHED")
+    advice["category"] = "INFO"
+    assert response_for("RUN_UNFINISHED")["category"] == "RECONCILE"

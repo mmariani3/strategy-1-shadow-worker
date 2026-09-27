@@ -39,6 +39,25 @@ The September 18 supervised chat attempt missed its launch window; a later POST_
 
 The coordinator currently finalizes raw discovery as PARTIAL because human/structured verification remains outstanding. Expect `COLLECTED_REVIEW_REQUIRED`; it must not be disguised as complete. Nonzero exits surface these conditions in job history and can trigger provider failure notifications. **Notification recipients and delivery must be verified before activation.** A healthy HTTP response is not an alert delivery test.
 
+### What to do when an alert arrives
+
+Scheduler 0.3.1 adds a deterministic `response` object to every JSON event: policy version, category, event stage, plain-language summary, action already taken by this invocation, user action and when it is needed. `discovery_alerts.py` contains the versioned playbook. It has no external calls, model usage or remediation side effects. Unknown outcomes require investigation and cannot emit a zero exit code.
+
+| Alert category | Your response | Scheduler behavior |
+|---|---|---|
+| `MISSED_SCAN` | Send the alert for investigation when convenient. No need to rush or chase an opportunity. | Reports the missed scan; no late replacement. |
+| `RECONCILE` | Request a read-only check before relying on the result. Do not press retry. | Reports uncertainty or an unfinished run; an in-flight request may still finish. No POST replay. |
+| `MAINTENANCE` | Have configuration, safety settings or saved evidence checked before relying on the pipeline. | Fails the current invocation. An unavailable/unsafe dependency is not presumed harmless. |
+| `TIMING_REVIEW` | Review actual timestamps and coverage rules before using the research. | Flags wrong/late timing and preserves the original records. |
+| `RESEARCH_REVIEW` | Review sources and missing coverage before using the research. If unavailable, leave it unreviewed. | Keeps raw discovery PARTIAL; no catalyst qualification or trade approval. |
+| `INFO` / `PROGRESS` | No response to this event. Progress still needs a final result. | Reports an expected skip, verified discovery completion, or intermediate activity. |
+
+For example, a `MISSED_LAUNCH_WINDOW` event says: **The permitted scan launch minute was missed. Skipped submission; did not launch a late replacement.** Its response timing is `WHEN_CONVENIENT`. A timeout with no saved result instead requests read-only reconciliation, because a remote request might still be running.
+
+These instructions apply only to discovery. They do not manage open positions or verify that every other service is disabled. The playbook is advisory: emitting an alert does not pause future scheduled jobs, repair configuration, obtain human approval, trigger Codex follow-up, or send a separate notification. No action is taken by this playbook if the user does not respond. The scheduler's existing per-invocation checks remain in force; any future scheduled run repeats its checks. Research is not approved by silence.
+
+Provider notifications may contain only a failure notice and a link to logs; the structured guidance is in those logs. Acceptance must verify where the user actually sees the guidance. Custom email rendering, automatic routing, deduplication, repeated-failure escalation and a persistent pause/reset mechanism are not implemented. Until notification receipt and presentation are tested, do not claim that the full playbook reaches the user's inbox.
+
 ## Proposed hosted configuration — NOT activated
 
 Use the existing premarket Render job, plus an independently scheduled audit invocation. No service, paid resource, notification destination or schedule is created by this commit.
@@ -63,7 +82,7 @@ On Render, a separate cron watchdog has a $1/month minimum and shares Render's f
 
 1. Review/merge this isolated change, deploy coordinator and launcher to staging, and verify the exact installed implementation versions. No schema migration is needed; the read endpoint reuses existing tables and authentication.
 2. Use isolated `INFRASTRUCTURE_TEST` staging fixtures for missing, unfinished, partial and completed states. Verify the read endpoint's calendar entitlement and persisted readback against the actual provider; local mocks do not establish either. Never inject synthetic records into production as STRATEGY_1.
-3. Verify one deliberate job failure reaches the intended user through provider notifications, and verify the watchdog still reports a missing run when its launcher is disabled. A test performed only by reading logs does not establish delivery.
+3. Verify one deliberate job failure reaches the intended user through provider notifications, verify that the recipient can access the matching response guidance, and verify the watchdog still reports a missing run when its launcher is disabled. A test performed only by reading logs does not establish delivery. Confirm expected PARTIAL alerts are recognizable as research review, not emergency trading instructions.
 4. Confirm coordinator availability during warm-up. The suspended/free service must actually be resumed and reachable; health checks cannot undo an administrative suspension.
 5. Approve the concrete activation configuration/cost, then enable discovery-only operation for a real prospective session. Keep execution components disabled. Independently check actual completion, coverage and notification receipt. No production activation is part of this PR.
 
@@ -71,6 +90,6 @@ Read-only counts use the existing Data API selection helper. If a provider row l
 
 ## Validation
 
-Run `python -m pytest -q tests/test_discovery_scheduler.py tests/test_discovery.py tests/test_journal.py` with repository dependencies installed. Tests block live network access. They cover exact-key API authentication, missing/stalled/partial runs, ambiguous POST delivery, stale readback, wrong identities/classes/phases, secret-safe failures, cold starts, warm-up/oversleep, DST, holidays, early closes, persistence discrepancies and inconsistent completion claims.
+Run `python -m pytest -q tests/test_discovery_scheduler.py tests/test_discovery.py tests/test_journal.py` with repository dependencies installed. Tests block live network access. They cover exact-key API authentication, missing/stalled/partial runs, ambiguous POST delivery, stale readback, wrong identities/classes/phases, secret-safe failures, cold starts, warm-up/oversleep, DST, holidays, early closes, persistence discrepancies and inconsistent completion claims. Alert tests require explicit guidance for every emitted outcome and verify missed-scan response timing, safety escalation, read-only reconciliation, preservation of PARTIAL results, intermediate/final distinction and unknown-outcome failure.
 
 References: [Render cron execution and pricing](https://render.com/docs/cronjobs), [Alpaca calendar endpoint](https://docs.alpaca.markets/us/v1.1/reference/getcalendar-1), [PostgREST table reads](https://docs.postgrest.org/en/v14/references/api/tables_views.html).

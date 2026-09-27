@@ -9,7 +9,9 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-SCHEDULER_VERSION = "0.3.0-discovery-scheduler"
+from discovery_alerts import OUTCOMES, response_for
+
+SCHEDULER_VERSION = "0.3.1-discovery-scheduler"
 
 
 def now():
@@ -49,9 +51,11 @@ def config():
 
 
 def emit(outcome, code=1, **fields):
-    print(json.dumps(dict(event="discovery_schedule", outcome=outcome,
+    if outcome not in OUTCOMES and code == 0:
+        code = 1
+    print(json.dumps(dict(fields, event="discovery_schedule", outcome=outcome,
                          observed_at=now().isoformat(), version=SCHEDULER_VERSION,
-                         exit_code=code, **fields), sort_keys=True))
+                         exit_code=code, response=response_for(outcome)), sort_keys=True))
     return code
 
 
