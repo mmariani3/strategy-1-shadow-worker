@@ -11,7 +11,11 @@ import requests
 
 from discovery_alerts import OUTCOMES, response_for
 
-SCHEDULER_VERSION = "0.3.1-discovery-scheduler"
+SCHEDULER_VERSION = "0.4.0-discovery-scheduler"
+
+
+class TransientReadFailure(requests.RequestException):
+    """A retryable HTTP failure without a provider response body."""
 
 
 def now():
@@ -53,9 +57,18 @@ def config():
 def emit(outcome, code=1, **fields):
     if outcome not in OUTCOMES and code == 0:
         code = 1
+    # Operational handling and research completion are separate facts. Expected
+    # partial research remains incomplete, but does not need a failed cron job.
+    assessment_code = code
+    if outcome == "COLLECTED_REVIEW_REQUIRED":
+        code = 0
+    response = response_for(outcome)
+    notification = "FAILURE" if code else "NONE"
     print(json.dumps(dict(fields, event="discovery_schedule", outcome=outcome,
                          observed_at=now().isoformat(), version=SCHEDULER_VERSION,
-                         exit_code=code, response=response_for(outcome)), sort_keys=True))
+                         exit_code=code, assessment_exit_code=assessment_code,
+                         discovery_complete=(outcome == "COMPLETED"),
+                         notification_route=notification, response=response), sort_keys=True))
     return code
 
 
@@ -63,9 +76,16 @@ def get(c, path, params=None):
     response = requests.get(c["url"] + path, params=params,
         headers={"Authorization": "Bearer " + c["token"]},
         timeout=(5, 45), allow_redirects=False)
+    if response.status_code in {408, 429} or 500 <= response.status_code < 600:
+        raise TransientReadFailure("Temporary dependency HTTP failure")
     if response.status_code != 200:
         raise ValueError("Dependency HTTP failure")
-    data = response.json()
+    try:
+        data = response.json()
+    except ValueError:
+        # requests.JSONDecodeError is also a RequestException; normalize it so
+        # malformed evidence is never mistaken for a retryable network fault.
+        raise ValueError("Invalid response JSON") from None
     if not isinstance(data, dict):
         raise ValueError("Invalid response")
     return data
@@ -79,9 +99,13 @@ def health(c):
             d = get(c, "/health")
             return (d.get("mode") == "SHADOW" and d.get("broker_execution_enabled") is False
                     and d.get("ruleset_version") == c["rules"])
-        except (requests.RequestException, ValueError):
+        except requests.RequestException:
             if attempt == 3:
                 return False
+        except ValueError:
+            # Authentication, malformed data and failed safety checks are not
+            # transient faults to retry until a more reassuring answer appears.
+            return False
 
 
 def stamp(value):
@@ -106,13 +130,59 @@ def readback(c, day, key):
     return data
 
 
+def matches_run(c, data, key):
+    run = data.get("run")
+    return (isinstance(run, dict) and run.get("run_key") == key
+            and run.get("session_date") == data["session"]["date"]
+            and run.get("phase") == c["phase"]
+            and run.get("experiment_class") == c["run_class"]
+            and run.get("ruleset_version") == c["rules"] and bool(run.get("id")))
+
+
+def verified_read(c, day, key, *, settle=False, initial=None, response_id=None):
+    """At most three GET checks; never POST, repair, approve or change evidence.
+
+    The fixed backoff is an operational retry budget, not a market-data freshness
+    allowance. Every reply still passes the original strict readback checks.
+    """
+    saved_id = None
+    for attempt, delay in enumerate((0, 2, 5)):
+        if delay:
+            emit("READBACK_RETRY", 0, run_key=key, attempt=attempt + 1,
+                 max_attempts=3, delay_seconds=delay)
+            time.sleep(delay)
+        try:
+            data = initial if attempt == 0 and initial is not None else readback(c, day, key)
+        except requests.RequestException:
+            if attempt == 2:
+                raise
+            continue
+        if not settle or not data["session"]["is_trading_day"]:
+            return data
+        run = data.get("run")
+        if saved_id is not None and (not isinstance(run, dict) or run.get("id") != saved_id):
+            raise ValueError("Run disappeared or changed during reconciliation")
+        if run is not None:
+            # Return inconsistencies for assessment immediately; never hide one
+            # by retrying until a later, apparently good record replaces it.
+            if not matches_run(c, data, key) or (response_id is not None and run.get("id") != response_id):
+                return data
+            saved_id = run["id"]
+            start, end = stamp(run["created_at"]), stamp(run["updated_at"])
+            if (start > end or end > stamp(data["checked_at"])
+                    or start.astimezone(c["zone"]).date().isoformat() != run["session_date"]):
+                return data
+            if run.get("status") != "IN_PROGRESS":
+                return data
+        if attempt == 2:
+            return data
+
+
 def assess(c, data, key):
     run = data.get("run")
     if run is None:
         return emit("MISSED_RUN", run_key=key)
-    if (run.get("run_key") != key or run.get("session_date") != data["session"]["date"]
-            or run.get("phase") != c["phase"] or run.get("experiment_class") != c["run_class"]
-            or run.get("ruleset_version") != c["rules"] or not run.get("id")):
+    if not matches_run(c, data, key):
         return emit("RUN_IDENTITY_MISMATCH", run_key=key)
     fields = dict(run_key=key, run_id=run["id"], phase=c["phase"],
                   collection_status=run.get("status"), candidates=run.get("candidates_discovered"))
@@ -177,13 +247,14 @@ def main():
         if not health(c):
             return emit("DEPENDENCY_UNAVAILABLE_OR_UNSAFE", run_key=key)
     try:
-        data = readback(c, day, key)
+        data = verified_read(c, day, key)
         if not data["session"]["is_trading_day"]:
             return emit("MARKET_CLOSED", 0, run_key=key)
         opened, closed = stamp(data["session"]["open"]), stamp(data["session"]["close"])
         if opened >= closed:
             raise ValueError("Invalid session")
         if c["action"] == "AUDIT" or data.get("run") is not None:
+            data = verified_read(c, day, key, settle=True, initial=data)
             return assess(c, data, key)
         # Cold starts must not silently push submission outside the authorized launch minute.
         current = now()
@@ -205,7 +276,7 @@ def main():
                 response_id = response.json().get("run_id")
         except (requests.RequestException, ValueError, AttributeError):
             pass
-        data = readback(c, day, key)
+        data = verified_read(c, day, key, settle=True, response_id=response_id)
         if data.get("run") is None:
             return emit("DISPATCH_OUTCOME_UNRESOLVED", run_key=key)
         if response_id is not None and response_id != data["run"].get("id"):

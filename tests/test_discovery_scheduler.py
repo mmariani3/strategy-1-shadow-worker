@@ -71,16 +71,19 @@ def output(capsys):
 
 
 def test_launch_readback_partial_is_visible(wired, capsys):
-    assert s.main() == 1
+    assert s.main() == 0
     events = output(capsys)
     assert events[-1]["outcome"] == "COLLECTED_REVIEW_REQUIRED"
     assert events[-1]["run_id"] == "local-run"
+    assert events[-1]["assessment_exit_code"] == 1
+    assert events[-1]["discovery_complete"] is False
+    assert events[-1]["notification_route"] == "NONE"
     assert wired["posts"] == 1 and len(wired["queries"]) == 2
     assert wired["queries"][0]["run_class"] == "INFRASTRUCTURE_TEST"
 
 
 @pytest.mark.parametrize("status,outcome,code", [
-    ("IN_PROGRESS", "RUN_UNFINISHED", 1), ("PARTIAL", "COLLECTED_REVIEW_REQUIRED", 1),
+    ("IN_PROGRESS", "RUN_UNFINISHED", 1), ("PARTIAL", "COLLECTED_REVIEW_REQUIRED", 0),
     ("DATA_UNAVAILABLE", "COLLECTION_FAILED", 1), ("FAILED", "COLLECTION_FAILED", 1),
     ("UNKNOWN", "COLLECTION_FAILED", 1), ("COMPLETE", "COMPLETED", 0)])
 def test_existing_run_never_reposts(wired, capsys, status, outcome, code):
@@ -133,7 +136,7 @@ def test_timeout_only_reconciles(wired, monkeypatch, capsys, committed, outcome)
             wired["run"] = record()
         raise requests.Timeout("private-token must not appear")
     monkeypatch.setattr(s.requests, "post", post)
-    assert s.main() == 1 and wired["posts"] == 1
+    assert s.main() == (0 if committed else 1) and wired["posts"] == 1
     events = output(capsys)
     assert events[-1]["outcome"] == outcome and "private-token" not in str(events)
 
@@ -254,7 +257,7 @@ def test_early_warmup_waits_on_host_then_dispatches(wired, monkeypatch, capsys):
         assert wired["posts"] == 0
         clock[0] = NOW
     monkeypatch.setattr(s.time, "sleep", sleep)
-    assert s.main() == 1 and wired["posts"] == 1
+    assert s.main() == 0 and wired["posts"] == 1
     assert output(capsys)[0]["outcome"] == "WARMED_WAITING_FOR_LAUNCH"
 
 
@@ -320,7 +323,7 @@ def test_all_scheduler_outcomes_have_explicit_operator_guidance():
 def test_saved_run_alerts_preserve_result_and_never_retry(wired, capsys, status, category, timing):
     wired["run"] = record(status)
     expected = deepcopy(wired["run"])
-    assert s.main() == (0 if status == "COMPLETE" else 1)
+    assert s.main() == (0 if status in {"COMPLETE", "PARTIAL"} else 1)
     event = output(capsys)[-1]
     assert event["run_key"] == KEY and event["run_id"] == "local-run"
     advice = event["response"]
@@ -360,9 +363,9 @@ def test_ambiguous_submission_advises_read_only_reconciliation(wired, monkeypatc
     assert events[0]["response"]["event_stage"] == "INTERMEDIATE"
     assert events[-1]["response"]["event_stage"] == "FINAL"
     assert events[-1]["response"]["category"] == "RECONCILE"
-    assert "read-only" in events[-1]["response"]["user_action"]
+    assert "Automatic checks could not" in events[-1]["response"]["user_action"]
     assert "Do not resubmit" in events[-1]["response"]["user_action"]
-    assert wired["posts"] == 1 and len(wired["queries"]) == 2
+    assert wired["posts"] == 1 and len(wired["queries"]) == 4
     assert "private-token" not in str(events)
 
 
@@ -379,3 +382,149 @@ def test_guidance_does_not_retain_mutated_payloads():
     advice = response_for("RUN_UNFINISHED")
     advice["category"] = "INFO"
     assert response_for("RUN_UNFINISHED")["category"] == "RECONCILE"
+
+
+@pytest.mark.parametrize("failure", ["timeout", 408, 429, 503])
+def test_transient_read_recovers_automatically_without_failure_alert(wired, monkeypatch, capsys, failure):
+    original = s.requests.get
+    attempts, delays = [], []
+    def get(url, **kwargs):
+        if url.endswith("/runs/scheduled"):
+            attempts.append(url)
+            if len(attempts) == 1:
+                if failure == "timeout":
+                    raise requests.Timeout("private-token")
+                return response({}, failure)
+        return original(url, **kwargs)
+    monkeypatch.setattr(s.requests, "get", get)
+    monkeypatch.setattr(s.time, "sleep", delays.append)
+    assert s.main() == 0
+    events = output(capsys)
+    assert events[0]["outcome"] == "READBACK_RETRY"
+    assert events[0]["response"]["event_stage"] == "INTERMEDIATE"
+    assert events[-1]["outcome"] == "COLLECTED_REVIEW_REQUIRED"
+    assert events[-1]["notification_route"] == "NONE"
+    assert len(attempts) == 3 and delays == [2] and wired["posts"] == 1
+    assert "private-token" not in str(events)
+
+
+def test_delayed_commit_after_timeout_is_reconciled_without_second_post(wired, monkeypatch, capsys):
+    def post(*a, **kw):
+        wired["posts"] += 1
+        raise requests.Timeout("private-token")
+    original = s.readback
+    reads = []
+    def readback(*a):
+        reads.append(True)
+        if len(reads) == 3:
+            wired["run"] = record()
+        return original(*a)
+    monkeypatch.setattr(s.requests, "post", post)
+    monkeypatch.setattr(s, "readback", readback)
+    assert s.main() == 0 and wired["posts"] == 1 and len(reads) == 3
+    final = output(capsys)[-1]
+    assert final["outcome"] == "COLLECTED_REVIEW_REQUIRED"
+    assert final["assessment_exit_code"] == 1 and final["notification_route"] == "NONE"
+
+
+def test_existing_pending_run_can_finish_without_resubmission(wired, monkeypatch, capsys):
+    wired["run"] = record("IN_PROGRESS")
+    monkeypatch.setattr(s.time, "sleep", lambda _: wired["run"].update(status="COMPLETE"))
+    assert s.main() == 0 and wired["posts"] == 0
+    final = output(capsys)[-1]
+    assert final["outcome"] == "COMPLETED" and final["discovery_complete"] is True
+    assert len(wired["queries"]) == 2
+
+
+@pytest.mark.parametrize("changed", [None, "other-id"])
+def test_reconciliation_never_hides_disappearing_or_changed_run(wired, monkeypatch, capsys, changed):
+    wired["run"] = record("IN_PROGRESS")
+    def change(_):
+        wired["run"] = None if changed is None else {**record("COMPLETE"), "id": changed}
+    monkeypatch.setattr(s.time, "sleep", change)
+    assert s.main() == 1 and wired["posts"] == 0
+    final = output(capsys)[-1]
+    assert final["outcome"] == "READBACK_UNAVAILABLE_OR_INVALID"
+    assert final["notification_route"] == "FAILURE"
+    assert len(wired["queries"]) == 2
+
+
+def test_exhausted_read_retries_escalate_without_dispatch(wired, monkeypatch, capsys):
+    reads, delays = [], []
+    def failed(*a):
+        reads.append(True)
+        raise requests.Timeout("private-token")
+    monkeypatch.setattr(s, "readback", failed)
+    monkeypatch.setattr(s.time, "sleep", delays.append)
+    assert s.main() == 1 and wired["posts"] == 0
+    events = output(capsys)
+    assert len(reads) == 3 and delays == [2, 5]
+    assert events[-1]["notification_route"] == "FAILURE"
+    assert events[-1]["discovery_complete"] is False
+    assert "private-token" not in str(events)
+
+
+@pytest.mark.parametrize("status,data", [(401, {}), (403, {}), (200, []),
+    (200, {"mode": "LIVE", "broker_execution_enabled": False, "ruleset_version": "v0.3"})])
+def test_permanent_health_errors_are_not_retried(wired, monkeypatch, capsys, status, data):
+    calls, delays = [], []
+    def get(*a, **kw):
+        calls.append(True)
+        return response(data, status)
+    monkeypatch.setattr(s.requests, "get", get)
+    monkeypatch.setattr(s.time, "sleep", delays.append)
+    assert s.main() == 1 and calls == [True] and delays == []
+    assert output(capsys)[-1]["notification_route"] == "FAILURE"
+    assert wired["posts"] == 0
+
+
+def test_readback_retry_cannot_move_submission_past_launch_minute(wired, monkeypatch, capsys):
+    original = s.readback
+    attempts = []
+    def readback(*a):
+        attempts.append(True)
+        if len(attempts) == 1:
+            raise requests.Timeout()
+        return original(*a)
+    monkeypatch.setattr(s, "readback", readback)
+    monkeypatch.setattr(s.time, "sleep", lambda _: monkeypatch.setattr(s, "now", lambda: NOW.replace(minute=1)))
+    assert s.main() == 1 and wired["posts"] == 0
+    assert output(capsys)[-1]["outcome"] == "MISSED_LAUNCH_WINDOW"
+
+
+def test_audit_missing_rechecks_but_never_launches(wired, monkeypatch, capsys):
+    monkeypatch.setenv("SCHEDULER_ACTION", "AUDIT")
+    delays = []
+    monkeypatch.setattr(s.time, "sleep", delays.append)
+    assert s.main() == 1 and wired["posts"] == 0
+    assert len(wired["queries"]) == 3 and delays == [2, 5]
+    assert output(capsys)[-1]["outcome"] == "MISSED_RUN"
+
+
+def test_invalid_readback_is_not_retried_until_it_looks_valid(wired, monkeypatch, capsys):
+    reads = []
+    original = s.readback
+    def readback(*a):
+        reads.append(True)
+        if len(reads) == 1:
+            raise ValueError("private-token malformed response")
+        return original(*a)
+    monkeypatch.setattr(s, "readback", readback)
+    assert s.main() == 1 and len(reads) == 1 and wired["posts"] == 0
+    assert output(capsys)[-1]["notification_route"] == "FAILURE"
+
+
+def test_requests_json_error_is_permanent_not_a_transport_retry(wired, monkeypatch, capsys):
+    original = s.requests.get
+    reads = []
+    def malformed():
+        raise requests.exceptions.JSONDecodeError("private-token", "invalid", 0)
+    def get(url, **kwargs):
+        if url.endswith("/runs/scheduled"):
+            reads.append(True)
+            return SimpleNamespace(status_code=200, json=malformed)
+        return original(url, **kwargs)
+    monkeypatch.setattr(s.requests, "get", get)
+    assert s.main() == 1 and len(reads) == 1 and wired["posts"] == 0
+    events = output(capsys)
+    assert events[-1]["notification_route"] == "FAILURE" and "private-token" not in str(events)
