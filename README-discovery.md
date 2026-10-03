@@ -2,6 +2,8 @@
 
 Phase-1 shadow discovery service for Strategy #1.
 
+See [scheduled launch verification and missed-run reporting](README-discovery-scheduling.md) for the hardened scheduler, read-only watchdog, proposed hosted configuration and activation checks. This documentation does not enable a schedule or broker execution.
+
 What it automates:
 - Alpaca top-mover/activity discovery.
 - Alpaca news collection.

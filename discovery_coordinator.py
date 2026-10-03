@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, model_validator
 from review_contract import CurrentReview, readiness_problem
 from build_info import implementation_version
 
-APP_VERSION = "0.9.0-shadow-discovery"
+APP_VERSION = "0.9.2-shadow-discovery"
 IMPLEMENTATION_VERSION = implementation_version("discovery_coordinator", APP_VERSION)
 RULESET_VERSION = os.getenv("RULESET_VERSION", "v0.3")
 
@@ -946,8 +946,10 @@ def run_scan(
         channel_status[
             "macro_economic_calendar"
         ] = "CHECKED_FRED_RELEASE_CALENDAR"
-    except Exception as e:
-        errors.append(str(e))
+    except Exception:
+        # Provider exceptions can contain credential-bearing URLs or bodies.
+        # Persist only fixed source-specific codes, never exception text.
+        errors.append("FRED_RELEASE_CALENDAR_UNAVAILABLE")
         channel_status[
             "macro_economic_calendar"
         ] = "DATA_UNAVAILABLE"
@@ -964,8 +966,8 @@ def run_scan(
             "premarket_movers_unusual_activity"
         ] = "CHECKED_ALPACA_SCREENER"
 
-    except Exception as e:
-        errors.append(str(e))
+    except Exception:
+        errors.append("ALPACA_MOVERS_UNAVAILABLE")
 
     try:
         news_body = fetch_news(req.news_hours)
@@ -990,8 +992,8 @@ def run_scan(
             "sector_industry"
         ] = "CHECKED_ALPACA_NEWS"
 
-    except Exception as e:
-        errors.append(str(e))
+    except Exception:
+        errors.append("ALPACA_NEWS_UNAVAILABLE")
 
     symbols = sorted(
         set(movers)
@@ -1002,8 +1004,8 @@ def run_scan(
 
     try:
         ticker_map = fetch_ticker_map()
-    except Exception as e:
-        errors.append(str(e))
+    except Exception:
+        errors.append("SEC_TICKER_MAP_UNAVAILABLE")
 
     inserted = 0
 
@@ -1209,6 +1211,67 @@ def latest_run(
         "items": items,
     }
 
+
+
+def scheduled_market_session(session_date: date) -> dict:
+    """Read only the paper market calendar; never infer holidays from a failure."""
+    if not 1970 <= session_date.year <= 2029:
+        raise HTTPException(503, "Market calendar date outside documented coverage.")
+    try:
+        response = requests.get(
+            "https://paper-api.alpaca.markets/v2/calendar", headers=alpaca_headers(),
+            params={"start": session_date.isoformat(), "end": session_date.isoformat()},
+            timeout=(5, 30), allow_redirects=False,
+        )
+        if response.status_code != 200:
+            raise ValueError("Calendar HTTP error")
+        rows = response.json()
+        if not isinstance(rows, list):
+            raise ValueError("Invalid calendar")
+        if not rows:
+            return {"date": session_date.isoformat(), "is_trading_day": False}
+        if len(rows) != 1 or rows[0]["date"] != session_date.isoformat():
+            raise ValueError("Mismatched calendar")
+        from zoneinfo import ZoneInfo
+        market_zone = ZoneInfo("America/New_York")
+        opened, closed = [datetime.fromisoformat(
+            f"{session_date.isoformat()}T{rows[0][key]}"
+        ).replace(tzinfo=market_zone) for key in ("open", "close")]
+        if opened >= closed:
+            raise ValueError("Invalid session hours")
+        return {"date": session_date.isoformat(), "is_trading_day": True,
+                "open": opened.isoformat(), "close": closed.isoformat()}
+    except (requests.RequestException, ValueError, TypeError, KeyError) as exc:
+        raise HTTPException(503, "Market calendar unavailable or invalid.") from exc
+
+
+@app.get("/runs/scheduled")
+def scheduled_run(
+    session_date: date,
+    phase: Literal["PREMARKET", "POST_OPEN"] = "PREMARKET",
+    run_class: Literal["STRATEGY_1", "INFRASTRUCTURE_TEST"] = "STRATEGY_1",
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer),
+):
+    """Exact-key readback for scheduler/watchdog; no scan or Journal side effects."""
+    require_auth(credentials)
+    key = make_run_key(ScanRequest(session_date=session_date, phase=phase, run_class=run_class))
+    session = scheduled_market_session(session_date)
+    run = get_existing_run_by_key(key)
+    summary = None
+    if run:
+        items = sb_select("strategy_discovery_items", {
+            "select": "id", "run_id": f"eq.{run['id']}",
+        })
+        fields = ("id", "run_key", "session_date", "phase", "ruleset_version",
+                  "experiment_class", "status", "created_at", "updated_at",
+                  "candidates_discovered", "channel_status", "transition_context")
+        summary = {k: run.get(k) for k in fields}
+        summary["items_persisted"] = len(items)
+    return {"run_key": key, "session": session, "run": summary,
+            "calendar_source": "ALPACA_PAPER_MARKET_CALENDAR",
+            "checked_at": datetime.now(timezone.utc).isoformat(),
+            "implementation_version": IMPLEMENTATION_VERSION,
+            "mode": "SHADOW", "broker_execution_enabled": False}
 
 
 class QualificationRequest(BaseModel):
