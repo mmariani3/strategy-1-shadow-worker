@@ -4,7 +4,8 @@ from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
-from journal_writer import JournalConflict,deliver,plan,writer_lock
+from journal_writer import JournalConflict,deliver,plan,writer_lock,reconcile_pending
+from journal_native import entered,prepare_patch
 from journal_projection import project_run,candidate_projection,run_projection
 from fastapi import HTTPException
 
@@ -17,6 +18,17 @@ class Sheets:
         self.writes=0
         self.fail_after_write=False
     def read(self): return copy.deepcopy(self.snapshot)
+    def native_cell(self,patch):
+        name,letters,row=re.fullmatch(r"'([^']+)'!([A-Z]+)([0-9]+)",patch['range']).groups()
+        column=0
+        for letter in letters: column=column*26+ord(letter)-64
+        grid=self.snapshot[name]['values']
+        value=grid[int(row)-1][column-1] if len(grid)>=int(row) and len(grid[int(row)-1])>=column else ''
+        return {'userEnteredValue':entered(value)} if entered(value) else {}
+    def prepare(self,patches):return [prepare_patch(p,self.native_cell(p),1) for p in patches]
+    def verify_native(self,patches,stage):
+        if any(self.native_cell(p)!=p['native'][stage] for p in patches):
+            raise JournalConflict('Native mismatch')
     def write(self,patches):
         self.writes+=1
         for patch in patches:
@@ -33,7 +45,7 @@ class Sheets:
 class Ledger:
     def __init__(self):self.state=None;self.completed=0
     def pending(self):return self.state
-    def begin(self,patches,rows):self.state="delivery";return self.state
+    def begin(self,patches,rows):self.state={'id':'delivery','patches':copy.deepcopy(patches),'source_rows':copy.deepcopy(rows)};return 'delivery'
     def complete(self,_):self.state=None;self.completed+=1
 
 
@@ -57,6 +69,32 @@ def test_ambiguous_write_blocks_retry(rows):
     with pytest.raises(TimeoutError):deliver(rows,sheets,ledger)
     with pytest.raises(JournalConflict):deliver(rows,sheets,ledger)
     assert sheets.writes==1 and ledger.pending()
+
+
+def test_successful_ambiguous_delivery_can_be_verified_without_resending(rows):
+    sheets,ledger=Sheets(rows),Ledger();sheets.fail_after_write=True
+    with pytest.raises(TimeoutError):deliver(rows,sheets,ledger)
+    assert reconcile_pending(sheets,ledger)['sheet_writes']==0
+    assert not ledger.pending() and sheets.writes==1
+    assert deliver(rows,sheets,ledger)['status']=='NOOP'
+
+
+def test_pending_incomplete_or_changed_delivery_stays_blocked(rows):
+    sheets,ledger=Sheets(rows),Ledger()
+    sheets.write=lambda patches:None
+    with pytest.raises(JournalConflict):deliver(rows,sheets,ledger)
+    with pytest.raises(JournalConflict):reconcile_pending(sheets,ledger)
+    assert ledger.pending()
+
+
+def test_native_mismatch_cannot_complete_ledger(rows):
+    sheets,ledger=Sheets(rows),Ledger();original=sheets.verify_native
+    def check(patches,stage):
+        if stage=='after':raise JournalConflict('Lost format')
+        original(patches,stage)
+    sheets.verify_native=check
+    with pytest.raises(JournalConflict):deliver(rows,sheets,ledger)
+    assert ledger.pending() and sheets.writes==1
 
 
 def test_multiple_insertions_reserve_different_rows(rows):

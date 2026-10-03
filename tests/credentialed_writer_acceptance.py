@@ -72,7 +72,7 @@ def main():
         def seed(count):
             run = uuid4()
             conn.execute("insert into strategy_discovery_runs(id,session_date,phase,status,run_key,ruleset_version,experiment_class,candidates_discovered,notes) values (%s,'2026-09-15','PREMARKET','PARTIAL',%s,'v0.3','STRATEGY_1',%s,%s)", (run, 'infrastructure-'+str(run), count, note))
-            for state, symbol in list(zip(('REVIEW_REQUIRED','WATCHLIST_CANDIDATE','REJECTED'),('DBREVIEW','DBWATCH','DBREJECT')))[:count]:
+            for state, symbol in list(zip(('REVIEW_REQUIRED','WATCHLIST_CANDIDATE','REJECTED'),('BBAI.WS','DBWATCH','DBREJECT')))[:count]:
                 conn.execute('insert into strategy_discovery_items(run_id,symbol,operational_state,notes) values (%s,%s,%s,%s)', (run,symbol,state,note))
             return run
         run = seed(3)
@@ -97,6 +97,8 @@ def main():
         # Real accepted Google write followed by a simulated lost acknowledgement.
         ambiguous_run=seed(0)
         class LostAcknowledgement:
+            def prepare(self,patches): return sheets.prepare(patches)
+            def verify_native(self,patches,stage): return sheets.verify_native(patches,stage)
             def read(self): return sheets.read()
             def write(self,patches):
                 sheets.write(patches)
@@ -110,7 +112,13 @@ def main():
         assert not plan(source_rows(conn,run_id=ambiguous_run),sheets.read())
         statuses=conn.execute('select status,count(*) n from journal_deliveries group by status order by status').fetchall()
         assert statuses==[{'status':'PENDING','n':1},{'status':'VERIFIED','n':1}]
-        print(json.dumps({'status':'PASSED','database':database,'source_records':4,'retry':'NOOP','competing_process':'BLOCKED','ambiguous_write':'PENDING preserved; retry blocked; Google readback confirms write','ledger':statuses}))
+        from journal_writer import reconcile_pending
+        with writer_lock(conn,args.test_sheet):
+            reconciled=reconcile_pending(sheets,PostgresLedger(conn,args.test_sheet))
+        assert reconciled['sheet_writes']==0 and not PostgresLedger(conn,args.test_sheet).pending()
+        print(json.dumps({'status':'PASSED','database':database,'source_records':4,'retry':'NOOP','competing_process':'BLOCKED',
+            'ambiguous_write':'PENDING preserved, retry blocked, then read-only reconciliation VERIFIED',
+            'native_metadata':'Verified on every delivery, including date text and BBAI.WS literal'}))
 
 
 if __name__=='__main__': main()
