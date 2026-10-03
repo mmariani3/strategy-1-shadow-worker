@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, model_validator
 from review_contract import CurrentReview, readiness_problem
 from build_info import implementation_version
 
-APP_VERSION = "0.9.1-shadow-discovery"
+APP_VERSION = "0.9.2-shadow-discovery"
 IMPLEMENTATION_VERSION = implementation_version("discovery_coordinator", APP_VERSION)
 RULESET_VERSION = os.getenv("RULESET_VERSION", "v0.3")
 
@@ -946,8 +946,10 @@ def run_scan(
         channel_status[
             "macro_economic_calendar"
         ] = "CHECKED_FRED_RELEASE_CALENDAR"
-    except Exception as e:
-        errors.append(str(e))
+    except Exception:
+        # Provider exceptions can contain credential-bearing URLs or bodies.
+        # Persist only fixed source-specific codes, never exception text.
+        errors.append("FRED_RELEASE_CALENDAR_UNAVAILABLE")
         channel_status[
             "macro_economic_calendar"
         ] = "DATA_UNAVAILABLE"
@@ -964,8 +966,8 @@ def run_scan(
             "premarket_movers_unusual_activity"
         ] = "CHECKED_ALPACA_SCREENER"
 
-    except Exception as e:
-        errors.append(str(e))
+    except Exception:
+        errors.append("ALPACA_MOVERS_UNAVAILABLE")
 
     try:
         news_body = fetch_news(req.news_hours)
@@ -990,8 +992,8 @@ def run_scan(
             "sector_industry"
         ] = "CHECKED_ALPACA_NEWS"
 
-    except Exception as e:
-        errors.append(str(e))
+    except Exception:
+        errors.append("ALPACA_NEWS_UNAVAILABLE")
 
     symbols = sorted(
         set(movers)
@@ -1002,8 +1004,8 @@ def run_scan(
 
     try:
         ticker_map = fetch_ticker_map()
-    except Exception as e:
-        errors.append(str(e))
+    except Exception:
+        errors.append("SEC_TICKER_MAP_UNAVAILABLE")
 
     inserted = 0
 
