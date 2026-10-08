@@ -11,7 +11,7 @@ import requests
 
 from discovery_alerts import OUTCOMES, response_for
 
-SCHEDULER_VERSION = "0.4.0-discovery-scheduler"
+SCHEDULER_VERSION = "0.5.0-discovery-scheduler"
 
 
 class TransientReadFailure(requests.RequestException):
@@ -36,7 +36,7 @@ def config():
              scan_minute=int(os.getenv("SCAN_LOCAL_MINUTE", os.getenv("LOCAL_MINUTE", "0"))),
              warmup=int(os.getenv("WARMUP_MINUTES", "0")),
              movers=int(os.getenv("MOVERS_TOP", "20")),
-             news=int(os.getenv("NEWS_HOURS", "18")))
+             news=int(os.getenv("NEWS_HOURS", "96")))
     url = urlsplit(c["url"])
     if c["action"] == "AUDIT" and not {"SCAN_LOCAL_HOUR", "SCAN_LOCAL_MINUTE"} <= os.environ.keys():
         raise ValueError("Audit requires the expected scan time separately from audit time")
@@ -49,7 +49,7 @@ def config():
             or not 0 <= c["minute"] < 60 or not 5 <= c["movers"] <= 50
             or not 0 <= c["scan_hour"] < 24 or not 0 <= c["scan_minute"] < 60
             or not 0 <= c["warmup"] < 60 or (c["action"] == "AUDIT" and c["warmup"] != 0)
-            or not 1 <= c["news"] <= 48):
+            or not 1 <= c["news"] <= 168):
         raise ValueError("Invalid scheduler configuration")
     return c
 
@@ -206,8 +206,7 @@ def assess(c, data, key):
     channels = run.get("channel_status")
     expected = {"earnings_guidance", "corporate_news", "analyst_actions", "sector_industry",
                 "premarket_movers_unusual_activity", "macro_economic_calendar", "cross_source_verification"}
-    checked = {"Checked", "CHECKED_ALPACA_NEWS", "CHECKED_ALPACA_SCREENER",
-               "CHECKED_FRED_RELEASE_CALENDAR", "VERIFIED"}
+    checked = {"Checked", "VERIFIED"}
     gaps = sorted(k for k in expected if not isinstance(channels, dict) or channels.get(k) not in checked)
     fields["coverage_gaps"] = gaps
     if run.get("status") == "PARTIAL":

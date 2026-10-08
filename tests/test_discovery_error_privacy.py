@@ -9,6 +9,8 @@ import discovery_coordinator as discovery
 
 @pytest.mark.parametrize("provider,code", [
     ("fetch_fred_release_calendar", "FRED_RELEASE_CALENDAR_UNAVAILABLE"),
+    ("collect_ism_calendar", "ISM_RELEASE_CALENDAR_UNAVAILABLE"),
+    ("collect_weekly_calendar", "WEEKLY_CALENDAR_UNAVAILABLE"),
     ("fetch_movers", "ALPACA_MOVERS_UNAVAILABLE"),
     ("fetch_news", "ALPACA_NEWS_UNAVAILABLE"),
     ("fetch_ticker_map", "SEC_TICKER_MAP_UNAVAILABLE"),
@@ -20,6 +22,8 @@ def test_provider_failure_diagnostics_never_persist_or_return(monkeypatch, provi
     monkeypatch.setattr(discovery, "require_auth", lambda _: None)
     monkeypatch.setattr(discovery, "create_run_once", lambda *args: ({"id": "offline-run"}, True))
     monkeypatch.setattr(discovery, "fetch_fred_release_calendar", lambda *args: [])
+    monkeypatch.setattr(discovery, "collect_ism_calendar", lambda *args: [])
+    monkeypatch.setattr(discovery, "collect_weekly_calendar", lambda *args: [])
     monkeypatch.setattr(discovery, "fetch_movers", lambda *args: {})
     monkeypatch.setattr(discovery, "fetch_news", lambda *args: {})
     monkeypatch.setattr(discovery, "fetch_ticker_map", lambda *args: {})

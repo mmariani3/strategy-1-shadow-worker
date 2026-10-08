@@ -2,6 +2,8 @@
 
 This change is infrastructure-only, based directly on main `7ea7c1170759c9536dc4f61c55da017390aebf08`. It does not depend on research/presentation draft PRs. Strategy v0.3, Experiment v0.5 and Phase 1 SHADOW remain unchanged. No orders, automatic promotion, invented freshness threshold or Journal writes are introduced.
 
+October 5 follow-up: [collection corrections and outstanding acceptance requirements](README-discovery.md#october-5-collection-corrections-0100) supersede the old feed-success interpretation. Only explicit `Checked`/`VERIFIED` channel results satisfy coverage checks. Default news lookback is now 96 hours (maximum 168); existing explicit overrides are preserved. No schedule or hosted setting is changed by this update.
+
 ## Problem addressed
 
 The old runner returned success for any response containing a run ID, including an `IN_PROGRESS` replay. It also returned success for every off-time invocation, without determining whether today's scan was missing. A paused job cannot report its own absence.
