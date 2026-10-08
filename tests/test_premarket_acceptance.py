@@ -34,7 +34,8 @@ def test_auth_and_fixed_staging_guard(configured, monkeypatch):
         a.guard("Bearer offline-token")
 
 
-@pytest.mark.parametrize("instant", [a.LAUNCH-timedelta(seconds=1), a.LAUNCH+timedelta(minutes=1)])
+@pytest.mark.parametrize("instant", [a.LAUNCH-timedelta(days=1), a.LAUNCH-timedelta(minutes=30),
+                                      a.LAUNCH-timedelta(seconds=1), a.LAUNCH+timedelta(minutes=1)])
 def test_execute_only_one_minute_no_network(instant, monkeypatch):
     monkeypatch.setattr(a, "now", lambda: instant)
     with pytest.raises(ValueError):

@@ -1,4 +1,4 @@
-"""October 8 isolated staging collector/storage acceptance. No strategy routes.
+"""October 9 isolated staging collector/storage acceptance. No strategy routes.
 
 This measures the collector and existing JSON storage contract, not the complete
 news/SEC coordinator pipeline. All saved evidence is INFRASTRUCTURE_TEST.
@@ -15,14 +15,14 @@ from fastapi import FastAPI, Header, HTTPException
 import requests
 from premarket_collection import collect_premarket, CALENDAR_URL
 
-DAY = date(2026, 10, 8)
-LAUNCH = datetime(2026, 10, 8, 13, tzinfo=timezone.utc)
+DAY = date(2026, 10, 9)
+LAUNCH = datetime(2026, 10, 9, 13, tzinfo=timezone.utc)
 STOP = LAUNCH + timedelta(minutes=15)
 EXPIRES = LAUNCH + timedelta(minutes=25)
 SERVICE = "srv-dal8abbl550s73cj3jm0"
 DB = "https://cihwmameyylixouggwxk.supabase.co"
-RUN_KEY = "STRATEGY_1|2026-10-08|PREMARKET|v0.3|INFRASTRUCTURE_TEST"
-LABEL = "OCT8_PREMARKET_STORAGE_ACCEPTANCE_NOT_STRATEGY_EVIDENCE"
+RUN_KEY = "STRATEGY_1|2026-10-09|PREMARKET|v0.3|INFRASTRUCTURE_TEST"
+LABEL = "OCT9_PREMARKET_STORAGE_ACCEPTANCE_NOT_STRATEGY_EVIDENCE"
 MAX_ITEMS = 3000
 FIELDS = "run_id,symbol,discovered_via,mover_snapshot,news_evidence,independent_evidence,catalyst_category,provisional_tier,verification_status,promotion_status,notes"
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
