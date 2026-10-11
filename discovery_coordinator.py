@@ -1,4 +1,5 @@
 import hmac
+import json
 import os
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
@@ -10,8 +11,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field, model_validator
 from review_contract import CurrentReview, readiness_problem
 from build_info import implementation_version
+from discovery_collection import collect_news, collect_ism_calendar, collect_weekly_calendar
+from premarket_collection import collect_premarket
 
-APP_VERSION = "0.9.2-shadow-discovery"
+APP_VERSION = "0.11.1-shadow-discovery"
 IMPLEMENTATION_VERSION = implementation_version("discovery_coordinator", APP_VERSION)
 RULESET_VERSION = os.getenv("RULESET_VERSION", "v0.3")
 
@@ -382,27 +385,8 @@ def fetch_movers(top: int = 20) -> dict[str, Any]:
     return r.json()
 
 
-def fetch_news(hours: int = 18) -> dict[str, Any]:
-    end = datetime.now(timezone.utc)
-    start = end - timedelta(hours=hours)
-
-    r = requests.get(
-        "https://data.alpaca.markets/v1beta1/news",
-        headers=alpaca_headers(),
-        params={
-            "start": start.isoformat(),
-            "end": end.isoformat(),
-            "sort": "desc",
-            "limit": 50,
-            "include_content": "false",
-        },
-        timeout=20,
-    )
-    if not r.ok:
-        raise RuntimeError(
-            f"Alpaca news failed: {r.status_code} {r.text[:250]}"
-        )
-    return r.json()
+def fetch_news(hours: int = 96) -> dict[str, Any]:
+    return collect_news(alpaca_headers(), hours)
 
 
 def fetch_fred_release_calendar(
@@ -646,9 +630,13 @@ def normalize_mover_rows(
                         ),
                         "source": "alpaca_screener_movers",
                         "source_note": (
-                            "Alpaca documents this endpoint "
-                            "as SIP-based movers data."
+                            "SIP regular-session mover reference. Before market open "
+                            "this endpoint shows the previous trading day's movers. "
+                            "Not current premarket price, gap, volume or liquidity."
                         ),
+                        "premarket_usable": False,
+                        "provider_updated_at": body.get("updated_at"),
+                        "collected_at": datetime.now(timezone.utc).isoformat(),
                     },
                 )
             )
@@ -690,15 +678,20 @@ def normalize_news(
                 "source_type": "financial_news",
                 "headline_or_event": headline,
                 "summary": summary,
-                "event_timestamp": (
+                "published_at": article.get("created_at"),
+                "updated_at": article.get("updated_at"),
+                "event_timestamp": None,
+                "feed_timestamp": (
                     article.get("created_at")
                     or article.get("updated_at")
                 ),
+                "event_timestamp_verified": False,
                 "url": article.get("url"),
                 "category": category,
                 "alpaca_news_id": article.get("id"),
                 "article_symbol_count": len(symbols),
-                "symbol_specific": len(symbols) <= 8,
+                "symbol_specific": False,
+                "symbol_relationship": "REVIEW_REQUIRED",
             }
             by_symbol.setdefault(
                 symbol,
@@ -720,7 +713,8 @@ def build_quality_flags(
     """
     flags: list[str] = []
 
-    price = mover_snapshot.get("price")
+    # A prior-session reference cannot evaluate today's soft price guideline.
+    price = mover_snapshot.get("price") if mover_snapshot.get("premarket_usable") else None
     if price is not None:
         try:
             if float(price) < 5:
@@ -733,11 +727,17 @@ def build_quality_flags(
     if mover_snapshot and not evidence:
         flags.append("MOVER_WITHOUT_NEWS_EXPLANATION")
 
+    if mover_snapshot:
+        flags.append("REGULAR_SESSION_MOVER_NOT_PREMARKET_DATA")
+
+    if evidence:
+        flags.append("UNDERLYING_EVENT_TIME_AND_SYMBOL_RELATIONSHIP_UNVERIFIED")
+
     if evidence and all(
         not item.get("symbol_specific", False)
         for item in evidence
     ):
-        flags.append("ONLY_BROAD_MULTI_SYMBOL_NEWS")
+        flags.append("SYMBOL_SPECIFIC_CATALYST_UNVERIFIED")
 
     if not sec_evidence:
         flags.append("NO_RECENT_DIRECT_SEC_EVIDENCE")
@@ -763,9 +763,9 @@ class ScanRequest(BaseModel):
         le=50,
     )
     news_hours: int = Field(
-        default=18,
+        default=96,
         ge=1,
-        le=48,
+        le=168,
     )
 
 
@@ -865,7 +865,11 @@ def health():
         "automatic_materiality_or_tier_assignment": False,
         "automatic_cross_source_verification": False,
         "macro_calendar_integrated": True,
-        "macro_calendar_source": "FRED_RELEASES_DATES",
+        "macro_calendar_source": "FRED_ISM_AND_FOREX_FACTORY_SUPPLEMENTS",
+        "macro_calendar_coverage_complete": False,
+        "premarket_activity_source_integrated": True,
+        "premarket_activity_coverage_complete": False,
+        "premarket_activity_source": "ALPACA_SIP_1MIN_BOUNDED_ACTIVE_US_EQUITY",
         "macro_calendar_configured": bool(FRED_API_KEY),
         "automatic_major_macro_classification": False,
     }
@@ -935,6 +939,8 @@ def run_scan(
     ] = {}
     macro_events: list[dict[str, Any]] = []
     macro_checked_at: str | None = None
+    macro_sources: list[str] = []
+    news_collection: dict[str, Any] = {"outcome": "PROVIDER_UNAVAILABLE"}
 
     try:
         macro_events = fetch_fred_release_calendar(
@@ -945,7 +951,8 @@ def run_scan(
         ).isoformat()
         channel_status[
             "macro_economic_calendar"
-        ] = "CHECKED_FRED_RELEASE_CALENDAR"
+        ] = "PARTIAL_MACRO_SOURCES_REVIEW_REQUIRED"
+        macro_sources.append("FRED_RELEASES_DATES")
     except Exception:
         # Provider exceptions can contain credential-bearing URLs or bodies.
         # Persist only fixed source-specific codes, never exception text.
@@ -953,6 +960,22 @@ def run_scan(
         channel_status[
             "macro_economic_calendar"
         ] = "DATA_UNAVAILABLE"
+
+    try:
+        macro_events.extend(collect_ism_calendar(req.session_date))
+        macro_sources.append("ISM_RELEASE_CALENDAR")
+        macro_checked_at = datetime.now(timezone.utc).isoformat()
+        channel_status["macro_economic_calendar"] = "PARTIAL_MACRO_SOURCES_REVIEW_REQUIRED"
+    except Exception:
+        errors.append("ISM_RELEASE_CALENDAR_UNAVAILABLE")
+
+    try:
+        macro_events.extend(collect_weekly_calendar(req.session_date))
+        macro_sources.append("FOREX_FACTORY_WEEKLY_CALENDAR")
+        macro_checked_at = datetime.now(timezone.utc).isoformat()
+        channel_status["macro_economic_calendar"] = "PARTIAL_MACRO_SOURCES_REVIEW_REQUIRED"
+    except Exception:
+        errors.append("WEEKLY_CALENDAR_UNAVAILABLE")
 
     try:
         mover_body = fetch_movers(req.movers_top)
@@ -964,13 +987,16 @@ def run_scan(
 
         channel_status[
             "premarket_movers_unusual_activity"
-        ] = "CHECKED_ALPACA_SCREENER"
+        ] = "PREMARKET_DATA_UNAVAILABLE_REGULAR_SESSION_REFERENCE_ONLY"
 
     except Exception:
         errors.append("ALPACA_MOVERS_UNAVAILABLE")
 
     try:
         news_body = fetch_news(req.news_hours)
+        news_collection = news_body.get("collection") or {"outcome": "UNVERIFIED_LEGACY_RESPONSE"}
+        news_status = ("NEWS_FEED_EXHAUSTED_REVIEW_REQUIRED" if news_collection.get("feed_exhausted")
+                       else "NEWS_FEED_INCOMPLETE")
 
         news_by_symbol, _ = normalize_news(
             news_body
@@ -978,26 +1004,36 @@ def run_scan(
 
         channel_status[
             "earnings_guidance"
-        ] = "CHECKED_ALPACA_NEWS"
+        ] = news_status
 
         channel_status[
             "corporate_news"
-        ] = "CHECKED_ALPACA_NEWS"
+        ] = news_status
 
         channel_status[
             "analyst_actions"
-        ] = "CHECKED_ALPACA_NEWS"
+        ] = news_status
 
         channel_status[
             "sector_industry"
-        ] = "CHECKED_ALPACA_NEWS"
+        ] = news_status
 
     except Exception:
         errors.append("ALPACA_NEWS_UNAVAILABLE")
 
+    premarket = {"items": {}, "collection": {"outcome": "PROVIDER_UNAVAILABLE"}}
+    try:
+        premarket = collect_premarket(alpaca_headers(), req.session_date, phase=req.phase)
+        if premarket["items"]:
+            channel_status["premarket_movers_unusual_activity"] = "PARTIAL_SIP_ACTIVITY_REVIEW_REQUIRED"
+    except Exception:
+        # Never persist headers, response bodies, URLs with tokens, or exception text.
+        pass
+
     symbols = sorted(
         set(movers)
         | set(news_by_symbol)
+        | set(premarket["items"])
     )
 
     ticker_map: dict[str, int] = {}
@@ -1061,6 +1097,9 @@ def run_scan(
                 "alpaca_news"
             )
 
+        if symbol in premarket["items"]:
+            discovered_via.append("alpaca_sip_premarket_bars")
+
         if sec_evidence:
             discovered_via.append(
                 "sec_edgar_recent_filing"
@@ -1083,10 +1122,11 @@ def run_scan(
                     "run_id": run["id"],
                     "symbol": symbol,
                     "discovered_via": discovered_via,
-                    "mover_snapshot": movers.get(
-                        symbol,
-                        {},
-                    ),
+                    "mover_snapshot": {
+                        **movers.get(symbol, {}),
+                        **({"premarket_activity": premarket["items"][symbol]}
+                           if symbol in premarket["items"] else {}),
+                    },
                     "news_evidence": evidence,
                     "independent_evidence": (
                         sec_evidence
@@ -1125,15 +1165,20 @@ def run_scan(
 
     notes = (
         f"{req.run_class} | "
-        "Wide-net collection completed. "
-        "FRED release-calendar coverage is collected when configured, "
-        "but the coordinator does not classify any release as major "
+        "Bounded wide-net collection attempted; full discovery coverage unresolved. "
+        "FRED, ISM and Forex Factory are supplemental calendars, not a complete event inventory. "
+        "The coordinator does not classify any release as major "
         "or imminent. That remains an explicit structured review gate. "
         "News and SEC evidence remain separate until "
         "explicit cross-source review confirms they "
         "refer to the same catalyst. "
         "Quality flags are review aids only and do not "
-        "redefine Strategy #1."
+        "redefine Strategy #1. "
+        "Regular-session movers do not establish current premarket activity. "
+        "News publication/update timestamps are not underlying event dates. "
+        "SIP minute bars are bounded activity evidence, not qualification or unusual-volume validation. "
+        "news_collection=" + json.dumps(news_collection, sort_keys=True)
+        + "; premarket_collection=" + json.dumps(premarket["collection"], sort_keys=True)
     )
 
     if errors:
@@ -1150,7 +1195,7 @@ def run_scan(
             "candidates_discovered": inserted,
             "macro_events": macro_events,
             "macro_source": (
-                "FRED_RELEASES_DATES"
+                "+".join(macro_sources)
                 if macro_checked_at is not None
                 else None
             ),

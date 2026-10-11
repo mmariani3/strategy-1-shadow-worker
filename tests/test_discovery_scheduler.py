@@ -82,6 +82,17 @@ def test_launch_readback_partial_is_visible(wired, capsys):
     assert wired["queries"][0]["run_class"] == "INFRASTRUCTURE_TEST"
 
 
+@pytest.mark.parametrize("flag", ["CHECKED_ALPACA_NEWS", "CHECKED_ALPACA_SCREENER", "CHECKED_FRED_RELEASE_CALENDAR"])
+def test_legacy_feed_success_cannot_satisfy_complete_protocol(wired, capsys, flag):
+    wired["run"] = record("COMPLETE")
+    wired["run"]["channel_status"]["earnings_guidance"] = flag
+    assert s.main() == 1
+    result = output(capsys)[-1]
+    assert result["outcome"] == "COVERAGE_STATUS_INCONSISTENT"
+    assert "earnings_guidance" in result["coverage_gaps"]
+    assert wired["posts"] == 0
+
+
 @pytest.mark.parametrize("status,outcome,code", [
     ("IN_PROGRESS", "RUN_UNFINISHED", 1), ("PARTIAL", "COLLECTED_REVIEW_REQUIRED", 0),
     ("DATA_UNAVAILABLE", "COLLECTION_FAILED", 1), ("FAILED", "COLLECTION_FAILED", 1),

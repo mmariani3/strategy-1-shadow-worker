@@ -133,7 +133,7 @@ def test_coverage_matches_live_dropdown_without_inferring_completion():
     run={"id":"run","session_date":"2026-09-15","phase":"PREMARKET","created_at":"2026-09-15T13:00:00Z","ruleset_version":"v0.3","status":"PARTIAL",
          "channel_status":{"earnings_guidance":"CHECKED_ALPACA_NEWS","cross_source_verification":"REVIEW_REQUIRED"}}
     row=run_projection(run)
-    assert row["values"]["Earnings / Guidance"]=="Checked"
+    assert row["values"]["Earnings / Guidance"]=="Unavailable"
     assert row["values"]["Cross-Source Verification"]=="Unavailable"
     assert row["values"]["Scan Status"]=="Partial"
     assert row["trace"]["channel_status"]==run["channel_status"]

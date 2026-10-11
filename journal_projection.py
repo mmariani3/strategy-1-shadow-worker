@@ -89,16 +89,21 @@ def run_projection(run):
         raise HTTPException(status_code=409, detail="Scan start timestamp missing or ambiguous; no journal write.") from exc
     # created_at is the collection start, never the preview/retry time or updated_at.
     context = f"Discovery phase: {phase} ({phase_labels[phase]}). Scan started at: {scan_time}."
+    notes = run.get("notes") or ""
+    if len(notes) > 40000:
+        # The broader collection's symbol manifest belongs in the audit record.
+        # Keep the Sheet cell bounded and explicitly point to the unchanged run.
+        notes = notes[:40000] + f" [EXCERPT ONLY: full collection manifest/notes retained in discovery run {run['id']}.]"
     values = {"Date": str(run["session_date"]), "Run ID": str(run["id"]),
               "Scan Time": scan_time,
               "Ruleset Version": run["ruleset_version"], "Candidates Discovered": run.get("candidates_discovered") or 0,
               "Scan Status": {"COMPLETE": "Complete", "PARTIAL": "Partial", "DATA_UNAVAILABLE": "Data Unavailable"}.get(run["status"], "Partial"),
-              "Notes": context + (" " + run["notes"] if run.get("notes") else "")}
+              "Notes": context + (" " + notes if notes else "")}
     for key, header in CHANNELS.items():
         status = (run.get("channel_status") or {}).get(key)
-        values[header] = "Checked" if status in {
-            "CHECKED_FRED_RELEASE_CALENDAR", "CHECKED_ALPACA_SCREENER", "CHECKED_ALPACA_NEWS", "Checked"
-        } else "Unavailable"
+        # Provider retrieval flags, including historical CHECKED_* values, do not
+        # establish the governing protocol's full channel coverage.
+        values[header] = "Checked" if status in {"Checked", "VERIFIED"} else "Unavailable"
     return {"sheet_name": "Scan Coverage", "key_column": "Run ID", "key": str(run["id"]), "values": values,
             "trace": {"run_id": str(run["id"]), "phase": phase, "scan_started_at": scan_time,
                       "channel_status": run.get("channel_status") or {}}}
