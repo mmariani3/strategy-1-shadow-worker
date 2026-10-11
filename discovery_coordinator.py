@@ -14,7 +14,7 @@ from build_info import implementation_version
 from discovery_collection import collect_news, collect_ism_calendar, collect_weekly_calendar
 from premarket_collection import collect_premarket
 
-APP_VERSION = "0.11.0-shadow-discovery"
+APP_VERSION = "0.11.1-shadow-discovery"
 IMPLEMENTATION_VERSION = implementation_version("discovery_coordinator", APP_VERSION)
 RULESET_VERSION = os.getenv("RULESET_VERSION", "v0.3")
 

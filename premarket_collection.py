@@ -17,7 +17,7 @@ CALENDAR_URL = "https://paper-api.alpaca.markets/v2/calendar"
 BARS_URL = "https://data.alpaca.markets/v2/stocks/bars"
 SNAPSHOTS_URL = "https://data.alpaca.markets/v2/stocks/snapshots"
 MARKET_TZ = ZoneInfo("America/New_York")
-BATCH_SIZE = 100
+BATCH_SIZE = 200
 MAX_ASSETS = 20000
 MAX_PAGES = 120
 BUDGET_SECONDS = 120
@@ -42,7 +42,14 @@ def number(value, *, positive=False):
 
 def snapshot_fields(snapshot, start, checked_at, previous_date):
     """Project only numeric/timestamp fields; never retain provider diagnostics."""
-    result = {"quote_status": "UNAVAILABLE", "previous_close_status": "UNAVAILABLE"}
+    result = {"quote_status": "UNAVAILABLE", "previous_close_status": "UNAVAILABLE",
+              "previous_close_unavailable_reason": "MISSING_OR_INVALID_PREVIOUS_DAILY_BAR"}
+    # Retain dates only, so a later read cannot be mistaken for premarket evidence.
+    for field in ("dailyBar", "prevDailyBar"):
+        try:
+            result[field + "_session_date"] = stamp(snapshot[field]["t"]).astimezone(MARKET_TZ).date().isoformat()
+        except (ValueError, TypeError, KeyError, AttributeError):
+            pass
     try:
         q = snapshot["latestQuote"]
         qt = stamp(q["t"])
@@ -58,10 +65,12 @@ def snapshot_fields(snapshot, start, checked_at, previous_date):
         bar = snapshot["prevDailyBar"]
         bt = stamp(bar["t"])
         if bt.astimezone(MARKET_TZ).date() != previous_date:
+            result["previous_close_unavailable_reason"] = "WRONG_PREVIOUS_SESSION"
             raise ValueError("Wrong prior session")
         close = number(bar["c"], positive=True)
         result.update(previous_close_status="UNADJUSTED_REVIEW_REQUIRED",
-                      previous_close=close, previous_close_at=bt.isoformat())
+                      previous_close=close, previous_close_at=bt.isoformat(),
+                      previous_close_unavailable_reason=None)
     except (ValueError, TypeError, KeyError, AttributeError):
         pass
     return result
@@ -95,7 +104,7 @@ def collect_premarket(headers, session_date, *, phase="PREMARKET", now=None, get
         meta["outcome"] = "OUTSIDE_CURRENT_PREMARKET"
         return result
     meta.update(requested_start=start.isoformat(), completed_minute_cutoff=cutoff.isoformat(),
-                budget_seconds=BUDGET_SECONDS, page_limit=MAX_PAGES)
+                budget_seconds=BUDGET_SECONDS, page_limit=MAX_PAGES, symbols_per_batch=BATCH_SIZE)
     started = clock()
     deadline = started + BUDGET_SECONDS
 

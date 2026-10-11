@@ -13,7 +13,7 @@ import time
 
 from fastapi import FastAPI, Header, HTTPException
 import requests
-from premarket_collection import collect_premarket, CALENDAR_URL
+from premarket_collection import collect_premarket, CALENDAR_URL, MAX_ASSETS
 
 DAY = date(2026, 10, 9)
 LAUNCH = datetime(2026, 10, 9, 13, tzinfo=timezone.utc)
@@ -23,7 +23,10 @@ SERVICE = "srv-dal8abbl550s73cj3jm0"
 DB = "https://cihwmameyylixouggwxk.supabase.co"
 RUN_KEY = "STRATEGY_1|2026-10-09|PREMARKET|v0.3|INFRASTRUCTURE_TEST"
 LABEL = "OCT9_PREMARKET_STORAGE_ACCEPTANCE_NOT_STRATEGY_EVIDENCE"
-MAX_ITEMS = 3000
+MAX_ITEMS = MAX_ASSETS
+WRITE_BATCH_SIZE = 100
+WRITE_BATCH_BYTES = 1024 * 1024
+PERSISTENCE_SECONDS = 180
 FIELDS = "run_id,symbol,discovered_via,mover_snapshot,news_evidence,independent_evidence,catalyst_category,provisional_tier,verification_status,promotion_status,notes"
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -68,6 +71,23 @@ def alpaca_headers():
             "APCA-API-SECRET-KEY": os.environ["ALPACA_API_SECRET"]}
 
 
+def audited_body(body):
+    context = {"owner": "premarket_staging_acceptance",
+        "implementation_version": os.getenv("RENDER_GIT_COMMIT", "unavailable") + ";" + source_hash(),
+        "reason": LABEL, "strategy_evidence_eligible": False}
+    if isinstance(body, list):
+        require(0 < len(body) <= WRITE_BATCH_SIZE)
+        require(all(isinstance(row, dict) and set(row) == set(FIELDS.split(",")) for row in body))
+        return [dict(row, transition_context=context) for row in body]
+    require(isinstance(body, dict))
+    return dict(body, transition_context=context)
+
+
+def encoded_body(body):
+    # Match Requests' JSON serialization, including ASCII escaping and spaces.
+    return json.dumps(body, allow_nan=False).encode("utf-8")
+
+
 def db_call(method, table, *, params=None, body=None):
     require(table in {"strategy_discovery_runs", "strategy_discovery_items"})
     require(method in {"GET", "POST", "PATCH"} and now() < EXPIRES)
@@ -80,9 +100,11 @@ def db_call(method, table, *, params=None, body=None):
     if key.count(".") == 2:
         headers["Authorization"] = "Bearer " + key
     if body is not None:
-        body = dict(body, transition_context={"owner": "premarket_staging_acceptance",
-            "implementation_version": os.getenv("RENDER_GIT_COMMIT", "unavailable") + ";" + source_hash(),
-            "reason": LABEL, "strategy_evidence_eligible": False})
+        if isinstance(body, list):
+            require(table == "strategy_discovery_items" and method == "POST")
+        body = audited_body(body)
+        if table == "strategy_discovery_items":
+            require(len(encoded_body(body)) <= WRITE_BATCH_BYTES)
     response = requests.request(method, DB + "/rest/v1/" + table, params=params, json=body,
                                 headers=headers, timeout=(3, 10), allow_redirects=False)
     require(response.status_code == (201 if method == "POST" else 200))
@@ -137,11 +159,13 @@ def item_payload(run_id, symbol, evidence):
             "promotion_status": "REVIEW_REQUIRED", "notes": LABEL}
 
 
-def verify_items(run_id, expected):
+def verify_items(run_id, expected, *, read=None, before_read=None):
+    read = read or db_call
+    before_read = before_read or (lambda: require(now() < STOP))
     actual = {}
     for offset in range(0, MAX_ITEMS+101, 100):
-        require(now() < STOP)
-        rows = db_call("GET", "strategy_discovery_items", params={"select": FIELDS,
+        before_read()
+        rows = read("GET", "strategy_discovery_items", params={"select": FIELDS,
             "run_id": "eq." + run_id, "order": "symbol.asc,id.asc", "offset": str(offset), "limit": "100"})
         require(len(rows) <= 100)
         for row in rows:
@@ -150,6 +174,61 @@ def verify_items(run_id, expected):
         if len(rows) < 100:
             return actual == expected
     return False
+
+
+def persist_items(run_id, items, *, write=None, payload=None, context=None, time_available=None):
+    """Bounded bulk inserts; acknowledge only a fully matched response, never retry."""
+    started = time.monotonic()
+    expected, symbols = {}, sorted(items)
+    write, payload = write or db_call, payload or item_payload
+    context = context if context is not None else audited_body({})["transition_context"]
+    time_available = time_available or (lambda: now() < STOP-timedelta(minutes=2))
+    outcome, failure, attempts = "ALL_ACKNOWLEDGED", False, 0
+    offset = 0
+    while offset < len(symbols):
+        if len(expected) >= MAX_ITEMS:
+            outcome = "ITEM_LIMIT"
+            break
+        if time.monotonic()-started >= PERSISTENCE_SECONDS or not time_available():
+            outcome = "TIME_BUDGET"
+            break
+        batch, batch_bytes = [], 2  # JSON array brackets.
+        try:
+            for symbol in symbols[offset:offset+min(WRITE_BATCH_SIZE, MAX_ITEMS-len(expected))]:
+                row = payload(run_id, symbol, items[symbol])
+                row_bytes = len(encoded_body(dict(row, transition_context=context))) + (2 if batch else 0)
+                if batch_bytes + row_bytes > WRITE_BATCH_BYTES:
+                    break
+                batch.append(row)
+                batch_bytes += row_bytes
+            if not batch:
+                outcome = "PAYLOAD_LIMIT"
+                break
+            # Encoding a batch also consumes the budget; check again before dispatch.
+            if time.monotonic()-started >= PERSISTENCE_SECONDS or not time_available():
+                outcome = "TIME_BUDGET"
+                break
+            attempts += 1
+            result = write("POST", "strategy_discovery_items", body=batch)
+            require(isinstance(result, list) and len(result) == len(batch))
+            wanted = {row["symbol"]: row for row in batch}
+            seen = set()
+            for row in result:
+                symbol = row["symbol"]
+                require(symbol in wanted and symbol not in seen)
+                require(all(k in row and row[k] == v for k, v in wanted[symbol].items()))
+                seen.add(symbol)
+            expected.update({symbol: digest(row) for symbol, row in wanted.items()})
+            offset += len(batch)
+        except Exception:
+            # Even a timeout may have committed the entire batch. Do not replay it.
+            failure, outcome = True, "WRITE_AMBIGUITY_OR_FAILURE"
+            break
+    return {"expected": expected, "unacknowledged_symbols": symbols[offset:],
+            "write_ambiguity_or_failure": failure, "persistence_outcome": outcome,
+            "write_requests_attempted": attempts, "write_batch_size": WRITE_BATCH_SIZE,
+            "write_batch_bytes": WRITE_BATCH_BYTES, "item_limit": MAX_ITEMS,
+            "persistence_seconds": time.monotonic()-started}
 
 
 def execute():
@@ -164,31 +243,17 @@ def execute():
     started = time.monotonic()
     data = collect_premarket(alpaca_headers(), DAY)
     collection_seconds = time.monotonic()-started
-    expected, skipped = {}, []
-    persistence_start = time.monotonic()
-    failure = False
-    for symbol in sorted(data["items"]):
-        if (len(expected) >= MAX_ITEMS or time.monotonic()-persistence_start >= 180
-                or now() >= STOP-timedelta(minutes=2) or failure):
-            skipped.append(symbol)
-            continue
-        body = item_payload(run_id, symbol, data["items"][symbol])
-        try:
-            result = db_call("POST", "strategy_discovery_items", body=body)
-            require(len(result) == 1 and all(result[0].get(k) == v for k,v in body.items()))
-            expected[symbol] = digest(body)
-        except Exception:
-            # No retries after an ambiguous write, including the remaining symbols.
-            failure = True
-            skipped.append(symbol)
-    persistence_seconds = time.monotonic()-persistence_start
+    persistence = persist_items(run_id, data["items"])
+    expected = persistence.pop("expected")
+    skipped = persistence["unacknowledged_symbols"]
+    persistence_seconds = persistence["persistence_seconds"]
     verified = verify_items(run_id, expected)
     collection = data["collection"]
     accepted = (bool(expected) and not skipped and verified and collection["outcome"] == "FEED_EXHAUSTED"
                 and not collection["unprocessed_symbols"])
     summary = {"label": LABEL, "run_id": run_id, "run_key": RUN_KEY, "accepted": accepted,
         "collection": collection, "collected_items": len(data["items"]), "acknowledged_items": len(expected),
-        "unacknowledged_symbols": skipped, "write_ambiguity_or_failure": failure,
+        **persistence,
         "paginated_fields_verified": verified, "expected_item_digests": expected,
         "collection_seconds": collection_seconds, "persistence_seconds": persistence_seconds,
         "full_coordinator_pipeline_accepted": False, "strategy_evidence_eligible": False}

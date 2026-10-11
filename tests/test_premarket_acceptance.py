@@ -97,7 +97,7 @@ def test_real_contract_payloads_are_infrastructure_only_and_ambiguity_stops_writ
         writes.append(body)
         if ambiguous:
             raise RuntimeError("SYNTHETIC_PRIVATE")
-        return [body]
+        return list(reversed(body))
     monkeypatch.setattr(a,"db_call",db)
     monkeypatch.setattr(a,"get_run",lambda: dict(record) if record else None)
     monkeypatch.setattr(a,"verify_items",lambda rid,expected: not ambiguous)
@@ -106,7 +106,7 @@ def test_real_contract_payloads_are_infrastructure_only_and_ambiguity_stops_writ
     summary=json.loads(record["notes"])
     assert summary["strategy_evidence_eligible"] is False
     assert result["accepted"] is (not ambiguous)
-    assert len(writes)==(1 if ambiguous else 3)
+    assert len(writes)==1
     assert "SYNTHETIC_PRIVATE" not in record["notes"]
     assert summary["unacknowledged_symbols"]==(["AAA","BBB","CCC"] if ambiguous else [])
 
@@ -120,10 +120,125 @@ def test_operational_item_cap_is_explicit_not_full_acceptance(configured,monkeyp
         if table=="strategy_discovery_runs":
             record.update(body); record["id"]="offline-run"
             return [dict(record)]
-        return [body]
+        return body
     monkeypatch.setattr(a,"db_call",db)
     monkeypatch.setattr(a,"get_run",lambda: dict(record) if record else None)
     monkeypatch.setattr(a,"verify_items",lambda *args: True)
     result=a.execute()
     assert result["accepted"] is False and result["acknowledged_items"]==1
     assert json.loads(record["notes"])["unacknowledged_symbols"]==["BBB"]
+
+
+def test_bulk_real_http_contract_includes_each_rows_audit_context(configured, monkeypatch):
+    captured = []
+    def request(method, url, **kwargs):
+        captured.append((method, url, kwargs))
+        return SimpleNamespace(status_code=201, json=lambda: kwargs["json"])
+    monkeypatch.setattr(a.requests, "request", request)
+    rows = [a.item_payload("run", s, {"fixture": True}) for s in ("AAA", "BBB")]
+    result = a.db_call("POST", "strategy_discovery_items", body=rows)
+    assert len(result) == 2 and all(r["transition_context"]["strategy_evidence_eligible"] is False for r in result)
+    assert all("transition_context" not in r for r in rows)  # Do not mutate expected digests.
+    method, url, kw = captured[0]
+    assert method == "POST" and url == a.DB + "/rest/v1/strategy_discovery_items"
+    assert kw["headers"]["Prefer"] == "return=representation"
+    assert not kw["allow_redirects"] and kw["timeout"] == (3, 10)
+    assert "resolution=" not in kw["headers"]["Prefer"]  # No upsert/replay.
+
+
+@pytest.mark.parametrize("case", ["runs", "patch", "empty", "too_many", "keys", "bytes"])
+def test_invalid_bulk_requests_fail_before_network(configured, monkeypatch, case):
+    rows = [a.item_payload("run", "AAA", {})]
+    method, table = "POST", "strategy_discovery_items"
+    if case == "runs": table = "strategy_discovery_runs"
+    if case == "patch": method = "PATCH"
+    if case == "empty": rows = []
+    if case == "too_many": rows *= a.WRITE_BATCH_SIZE + 1
+    if case == "keys": rows[0].pop("notes")
+    if case == "bytes": monkeypatch.setattr(a, "WRITE_BATCH_BYTES", 1)
+    with pytest.raises(ValueError):
+        a.db_call(method, table, body=rows)
+
+
+def test_3689_items_bulk_acknowledged_and_independently_paginated(configured, monkeypatch):
+    items = {f"X{i:05}": {"fixture": i} for i in range(3689)}
+    stored, writes, reads = [], [], []
+    def db(method, table, params=None, body=None):
+        assert table == "strategy_discovery_items"
+        if method == "POST":
+            writes.append(body)
+            stored.extend(body)
+            return list(reversed(body))  # Response ordering is not contractual.
+        reads.append(params)
+        offset = int(params["offset"])
+        return stored[offset:offset+100]
+    monkeypatch.setattr(a, "db_call", db)
+    result = a.persist_items("run", items)
+    assert len(writes) == 37 and len(writes[-1]) == 89
+    assert result["persistence_outcome"] == "ALL_ACKNOWLEDGED"
+    assert len(result["expected"]) == 3689 and not result["unacknowledged_symbols"]
+    assert a.verify_items("run", result["expected"]) and len(reads) == 37
+    stored[-1]["mover_snapshot"] = {}
+    assert not a.verify_items("run", result["expected"])
+
+
+@pytest.mark.parametrize("bad", ["timeout", "missing", "duplicate", "changed", "extra", "null_field_missing"])
+def test_bad_second_batch_never_retries_or_acknowledges_partial_response(configured, monkeypatch, bad):
+    monkeypatch.setattr(a, "WRITE_BATCH_SIZE", 2)
+    items = {f"X{i}": {} for i in range(5)}
+    calls = []
+    def db(method, table, body):
+        calls.append(body)
+        if len(calls) == 1: return body
+        if bad == "timeout": raise TimeoutError("PRIVATE_ERROR")
+        if bad == "missing": return body[:1]
+        if bad == "duplicate": return [body[0], body[0]]
+        if bad == "extra": return body + [body[0]]
+        altered = [dict(row) for row in body]
+        if bad == "changed": altered[1]["notes"] = "wrong"
+        if bad == "null_field_missing": altered[1].pop("provisional_tier")
+        return altered
+    monkeypatch.setattr(a, "db_call", db)
+    result = a.persist_items("run", items)
+    assert len(calls) == 2 and set(result["expected"]) == {"X0", "X1"}
+    assert result["unacknowledged_symbols"] == ["X2", "X3", "X4"]
+    assert result["write_ambiguity_or_failure"]
+    assert "PRIVATE_ERROR" not in json.dumps(result)
+
+
+def test_byte_limit_splits_batches_and_oversized_item_stops_without_dispatch(configured, monkeypatch):
+    items = {s: {"fixture": "\\u2603" * 50} for s in ("AAA", "BBB", "CCC")}
+    size = len(a.encoded_body(a.audited_body([a.item_payload("run", "AAA", items["AAA"])])))
+    monkeypatch.setattr(a, "WRITE_BATCH_BYTES", size)
+    calls = []
+    def db(method, table, body):
+        calls.append(body)
+        assert len(a.encoded_body(a.audited_body(body))) <= size
+        return body
+    monkeypatch.setattr(a, "db_call", db)
+    result = a.persist_items("run", items)
+    assert len(calls) == 3 and len(result["expected"]) == 3
+    calls.clear()
+    monkeypatch.setattr(a, "WRITE_BATCH_BYTES", size-1)
+    result = a.persist_items("run", items)
+    assert not calls and result["persistence_outcome"] == "PAYLOAD_LIMIT"
+    assert result["unacknowledged_symbols"] == ["AAA", "BBB", "CCC"]
+
+
+@pytest.mark.parametrize("wall_deadline", [False, True])
+def test_persistence_time_limit_stops_between_batches(configured, monkeypatch, wall_deadline):
+    monkeypatch.setattr(a, "WRITE_BATCH_SIZE", 1)
+    elapsed = [0]
+    monkeypatch.setattr(a.time, "monotonic", lambda: elapsed[0])
+    calls = []
+    def db(method, table, body):
+        calls.append(body)
+        if wall_deadline:
+            monkeypatch.setattr(a, "now", lambda: a.STOP-timedelta(minutes=2))
+        else:
+            elapsed[0] = 180
+        return body
+    monkeypatch.setattr(a, "db_call", db)
+    result = a.persist_items("run", {"AAA": {}, "BBB": {}})
+    assert len(calls) == 1 and result["persistence_outcome"] == "TIME_BUDGET"
+    assert result["unacknowledged_symbols"] == ["BBB"]

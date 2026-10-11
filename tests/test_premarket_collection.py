@@ -276,3 +276,33 @@ def test_large_audit_manifest_remains_in_source_with_bounded_journal_excerpt():
     assert "EXCERPT ONLY" in projected["values"]["Notes"]
     assert "discovery run offline-run" in projected["values"]["Notes"]
     assert run["notes"] == notes
+
+
+def test_october9_sized_universe_can_fit_page_cap_without_narrowing():
+    # Invented symbols, not a reconstruction or replay of actual market evidence.
+    universe = [asset(f"X{i:05}") for i in range(13241)]
+    result, calls = collect([{"bars": {}} for _ in range(67)], assets=universe)
+    meta = result["collection"]
+    assert meta["outcome"] == "FEED_EXHAUSTED"
+    assert len(meta["completed_symbols"]) == 13241 and not meta["unprocessed_symbols"]
+    assert meta["bars_pages_received"] == 67
+    assert p.MAX_PAGES == 120 and p.BUDGET_SECONDS == 120
+    assert max(len(kw["params"]["symbols"].split(",")) for url, kw in calls if url == p.BARS_URL) == 200
+
+
+def test_snapshot_diagnostics_preserve_dates_without_inventing_prior_close():
+    result, _ = collect([{"bars": {"AAA": [bar()]}}], snapshots={"AAA": snapshot(
+        dailyBar={"t": "2026-10-06T04:00:00Z", "c": 10},
+        prevDailyBar={"t": "2026-10-05T04:00:00Z", "c": 9})})
+    row = result["items"]["AAA"]
+    assert row["dailyBar_session_date"] == "2026-10-06"
+    assert row["prevDailyBar_session_date"] == "2026-10-05"
+    assert row["previous_close_unavailable_reason"] == "WRONG_PREVIOUS_SESSION"
+    assert row["gap_percent_unadjusted"] is None and "previous_close" not in row
+
+
+def test_snapshot_diagnostics_do_not_keep_private_malformed_fields():
+    row = p.snapshot_fields({"dailyBar": {"t": "PRIVATE_ERROR"}, "prevDailyBar": None},
+                            NOW, NOW, date(2026, 10, 6))
+    assert "PRIVATE_ERROR" not in json.dumps(row)
+    assert row["previous_close_unavailable_reason"] == "MISSING_OR_INVALID_PREVIOUS_DAILY_BAR"
