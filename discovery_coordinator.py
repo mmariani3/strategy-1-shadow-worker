@@ -13,8 +13,9 @@ from review_contract import CurrentReview, readiness_problem
 from build_info import implementation_version
 from discovery_collection import collect_news, collect_ism_calendar, collect_weekly_calendar
 from premarket_collection import collect_premarket
+from shadow_evidence_routes import router as shadow_evidence_router
 
-APP_VERSION = "0.11.1-shadow-discovery"
+APP_VERSION = "0.11.2-shadow-discovery"
 IMPLEMENTATION_VERSION = implementation_version("discovery_coordinator", APP_VERSION)
 RULESET_VERSION = os.getenv("RULESET_VERSION", "v0.3")
 
@@ -46,6 +47,7 @@ app = FastAPI(
 )
 
 bearer = HTTPBearer(auto_error=False)
+app.include_router(shadow_evidence_router)
 
 CATALYST_FORMS = {"8-K", "10-Q", "10-K", "6-K"}
 
@@ -872,6 +874,8 @@ def health():
         "premarket_activity_source": "ALPACA_SIP_1MIN_BOUNDED_ACTIVE_US_EQUITY",
         "macro_calendar_configured": bool(FRED_API_KEY),
         "automatic_major_macro_classification": False,
+        "evidence_routes_staging_only": True,
+        "evidence_preview_creates_current_review": False,
     }
 
 
