@@ -2,6 +2,7 @@
 from copy import deepcopy
 from datetime import timedelta
 import json
+from types import SimpleNamespace
 
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
@@ -98,3 +99,29 @@ def test_write_cutoff_and_historical_patch_fail_before_transport(configured, mon
     monkeypatch.setattr(app, "now", lambda: app.LAUNCH)
     with pytest.raises(ValueError):
         app.db_call("PATCH", "strategy_discovery_runs", params={"run_key":"eq.old"}, body={"status":"PARTIAL"})
+
+
+@pytest.mark.parametrize("historical_ok", [True, False])
+def test_preflight_must_authenticate_historical_sip_in_addition_to_quotes(configured, monkeypatch, historical_ok):
+    responses = iter([
+        [{"date":"2026-10-13","open":"09:30","close":"16:00"}],
+        {"quotes":{"SPY":{}}}, {"SPY":{}}])
+    def get(*a, **kw):
+        body = next(responses)
+        return SimpleNamespace(status_code=200,json=lambda:body)
+    monkeypatch.setattr(app.requests,"get",get)
+    probes = []
+    def dated(headers,symbols,day,**kwargs):
+        probes.append((symbols,day))
+        return {"previous_close":{"outcome":"COLLECTION_COMPLETE_REVIEW_REQUIRED" if historical_ok else "PARTIAL",
+            "session_date":"2026-10-13","prior_session":"2026-10-12",
+            "items":{"SPY":{"status":"RAW_DAILY_CLOSE_REVIEW_REQUIRED"}}}}
+    monkeypatch.setattr(app,"dated_prior_evidence",dated)
+    monkeypatch.setattr(app,"get_run",lambda:None)
+    if historical_ok:
+        result=app.preflight("Bearer offline-token")
+        assert result["historical_sip_authenticated"] is True and result["run_absent"] is True
+        assert result["historical_probe_prior_session"] == "2026-10-12"
+    else:
+        with pytest.raises(HTTPException): app.preflight("Bearer offline-token")
+    assert probes == [(["SPY"],app.DAY)]

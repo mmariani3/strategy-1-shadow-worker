@@ -18,6 +18,7 @@ from premarket_collection import CALENDAR_URL, SNAPSHOTS_URL, stamp, MARKET_TZ
 
 from premarket_evidence_collection import collect_premarket_with_prior
 from premarket_evidence_storage import persist_universe
+from shadow_evidence_workflow import dated_prior_evidence
 
 DAY = date(2026, 10, 13)
 LAUNCH = datetime(2026, 10, 13, 13, tzinfo=timezone.utc)
@@ -153,6 +154,14 @@ def preflight(authorization: str | None = Header(default=None)):
         calendar = response.json()
         require(len(calendar) == 1 and calendar[0]["date"] == DAY.isoformat()
                 and calendar[0]["open"] == "09:30" and calendar[0]["close"] == "16:00")
+        # Check the historical SIP path too, using today's actual session. During
+        # setup this is October 12; launch repeats it on October 13. Neither read
+        # is the full-universe premarket acceptance or a stored candidate.
+        instant = now()
+        dated = dated_prior_evidence(alpaca_headers(), ["SPY"],
+                                    instant.astimezone(MARKET_TZ).date(), now=instant)["previous_close"]
+        require(dated["outcome"] == "COLLECTION_COMPLETE_REVIEW_REQUIRED"
+                and dated["items"]["SPY"]["status"] == "RAW_DAILY_CLOSE_REVIEW_REQUIRED")
         # Calendar auth alone does not establish SIP entitlement.
         quote = requests.get("https://data.alpaca.markets/v2/stocks/quotes/latest",
                              params={"symbols": "SPY", "feed": "sip"}, headers=alpaca_headers(),
@@ -173,6 +182,9 @@ def preflight(authorization: str | None = Header(default=None)):
         existing = get_run()
         return {**health(), "checked_at": now().isoformat(), "database": "STAGING",
                 "calendar_authenticated": True, "sip_endpoint_authenticated": True,
+                "historical_sip_authenticated": True,
+                "historical_probe_session": dated["session_date"],
+                "historical_probe_prior_session": dated["prior_session"],
                 "snapshot_endpoint_authenticated": True, "snapshot_diagnostic": diagnostic,
                 "run_absent": existing is None, "run_key": RUN_KEY}
     except Exception:
