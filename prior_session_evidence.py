@@ -1,7 +1,7 @@
 """Opt-in, read-only dated daily-bar evidence; not a qualification decision.
 
-No caller, route, scheduler or existing collector uses this adapter yet. Relative
-snapshot fields are deliberately excluded. Raw closes require corporate-action
+Infrastructure evidence callers use this adapter; relative snapshot fields are
+deliberately excluded. Raw closes require corporate-action
 and instrument review; they are not asserted to be official auction closes.
 """
 from datetime import date, datetime, time as day_time, timedelta, timezone

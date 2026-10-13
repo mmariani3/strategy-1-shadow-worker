@@ -13,9 +13,10 @@ from review_contract import CurrentReview, readiness_problem
 from build_info import implementation_version
 from discovery_collection import collect_news, collect_ism_calendar, collect_weekly_calendar
 from premarket_collection import collect_premarket
+from premarket_evidence_collection import collect_premarket_with_prior
 from shadow_evidence_routes import router as shadow_evidence_router
 
-APP_VERSION = "0.11.2-shadow-discovery"
+APP_VERSION = "0.12.0-shadow-discovery"
 IMPLEMENTATION_VERSION = implementation_version("discovery_coordinator", APP_VERSION)
 RULESET_VERSION = os.getenv("RULESET_VERSION", "v0.3")
 
@@ -749,6 +750,7 @@ def build_quality_flags(
 
 class ScanRequest(BaseModel):
     session_date: date
+    include_dated_prior_evidence: bool = Field(default=False, strict=True)
     phase: Literal[
         "PREMARKET",
         "POST_OPEN",
@@ -887,6 +889,14 @@ def run_scan(
     ),
 ):
     require_auth(credentials)
+
+    if req.include_dated_prior_evidence and not (
+        req.run_class == "INFRASTRUCTURE_TEST" and req.phase == "PREMARKET"
+        and os.getenv("RENDER_SERVICE_ID") == "srv-dal8abbl550s73cj3jm0"
+        and (SUPABASE_URL or "").rstrip("/") == "https://cihwmameyylixouggwxk.supabase.co"
+        and RULESET_VERSION == "v0.3"
+    ):
+        raise HTTPException(403, "DATED_EVIDENCE_STAGING_INFRASTRUCTURE_ONLY")
 
     run_key = make_run_key(req)
     run, created_new = create_run_once(req, run_key)
@@ -1027,7 +1037,13 @@ def run_scan(
 
     premarket = {"items": {}, "collection": {"outcome": "PROVIDER_UNAVAILABLE"}}
     try:
-        premarket = collect_premarket(alpaca_headers(), req.session_date, phase=req.phase)
+        if req.include_dated_prior_evidence:
+            premarket = collect_premarket_with_prior(alpaca_headers(), req.session_date, phase=req.phase)
+            # The coordinator persists only activity/catalyst leads. Full-universe
+            # ledger persistence belongs to the isolated storage acceptance path.
+            premarket["collection"]["prior_coverage_rows_persisted_by_coordinator"] = False
+        else:
+            premarket = collect_premarket(alpaca_headers(), req.session_date, phase=req.phase)
         if premarket["items"]:
             channel_status["premarket_movers_unusual_activity"] = "PARTIAL_SIP_ACTIVITY_REVIEW_REQUIRED"
     except Exception:
