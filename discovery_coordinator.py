@@ -15,8 +15,11 @@ from discovery_collection import collect_news, collect_ism_calendar, collect_wee
 from premarket_collection import collect_premarket
 from premarket_evidence_collection import collect_premarket_with_prior
 from shadow_evidence_routes import router as shadow_evidence_router
+from coordinator_acceptance_controls import active as acceptance_controls, coverage_ledger
+from catalyst_source_evidence import SourceCollector
+from shadow_evidence_workflow import attach_prior_evidence
 
-APP_VERSION = "0.12.0-shadow-discovery"
+APP_VERSION = "0.13.0-coordinator-acceptance-local"
 IMPLEMENTATION_VERSION = implementation_version("discovery_coordinator", APP_VERSION)
 RULESET_VERSION = os.getenv("RULESET_VERSION", "v0.3")
 
@@ -134,6 +137,8 @@ def sb_headers(prefer: bool = True) -> dict[str, str]:
 
 
 def attributable(record):
+    if acceptance_controls():
+        return {**record, "transition_context": acceptance_controls().context.copy()}
     review = record.get("qualification_review") or record.get("rejection_review") or (record.get("setup_review") or {}).get("current_review") or {}
     return {**record, "transition_context": {"owner": "discovery_coordinator",
         "implementation_version": IMPLEMENTATION_VERSION, "reviewer": review.get("reviewer"),
@@ -144,6 +149,8 @@ def sb_insert(
     table: str,
     record: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    if acceptance_controls():
+        raise HTTPException(403, "USE_BOUNDED_ACCEPTANCE_STORAGE_ONLY")
     r = requests.post(
         f"{SUPABASE_URL.rstrip('/')}/rest/v1/{table}",
         headers=sb_headers(),
@@ -163,6 +170,8 @@ def sb_update(
     row_id: str,
     record: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    if acceptance_controls():
+        raise HTTPException(403, "ITEM_MUTATIONS_DISABLED_DURING_ACCEPTANCE")
     r = requests.patch(
         f"{SUPABASE_URL.rstrip('/')}/rest/v1/{table}",
         headers=sb_headers(),
@@ -198,19 +207,24 @@ def finalize_discovery_run(
     This prevents an HTTP-success/zero-row PATCH from leaving a run
     silently stuck in IN_PROGRESS.
     """
-    r = requests.patch(
-        f"{SUPABASE_URL.rstrip('/')}/rest/v1/strategy_discovery_runs",
-        headers=sb_headers(),
-        params={"run_key": f"eq.{run_key}"},
-        json=attributable(record),
-        timeout=20,
-    )
+    controls = acceptance_controls()
+    if controls:
+        r = controls.database("PATCH", "strategy_discovery_runs", headers=sb_headers(),
+                              params={"run_key": "eq."+run_key}, body=record)
+    else:
+        r = requests.patch(
+            f"{SUPABASE_URL.rstrip('/')}/rest/v1/strategy_discovery_runs",
+            headers=sb_headers(),
+            params={"run_key": f"eq.{run_key}"},
+            json=attributable(record),
+            timeout=20,
+        )
     if not r.ok:
         raise HTTPException(
             status_code=502,
             detail=(
                 "Supabase discovery-run finalization failed: "
-                f"{r.status_code} {r.text[:500]}"
+                f"HTTP {r.status_code}"
             ),
         )
 
@@ -243,6 +257,9 @@ def finalize_discovery_run(
             ),
         )
 
+    if controls and any(persisted.get(k) != v for k, v in record.items()):
+        raise HTTPException(502, "RUN_FINALIZATION_READBACK_MISMATCH")
+
     expected_count = record.get("candidates_discovered")
     if (
         expected_count is not None
@@ -263,16 +280,19 @@ def sb_select(
     table: str,
     params: dict[str, str],
 ) -> list[dict[str, Any]]:
-    r = requests.get(
+    if acceptance_controls():
+        r = acceptance_controls().database("GET", table, headers=sb_headers(False), params=params)
+    else:
+        r = requests.get(
         f"{SUPABASE_URL.rstrip('/')}/rest/v1/{table}",
         headers=sb_headers(prefer=False),
         params=params,
         timeout=20,
-    )
+        )
     if not r.ok:
         raise HTTPException(
             status_code=502,
-            detail=f"Supabase query failed: {r.status_code} {r.text[:500]}",
+            detail=f"Supabase query failed: HTTP {r.status_code}",
         )
     return r.json()
 
@@ -318,6 +338,8 @@ def create_run_once(
     authoritative duplicate guard. A race between two retries is
     handled by re-reading the existing row after a uniqueness conflict.
     """
+    if acceptance_controls():
+        return acceptance_controls().claim(req, run_key, headers=sb_headers())
     existing = get_existing_run_by_key(run_key)
     if existing:
         return existing, False
@@ -374,8 +396,13 @@ def alpaca_headers() -> dict[str, str]:
     }
 
 
+def source_get(url, **kwargs):
+    controls = acceptance_controls()
+    return controls.source_get(url, **kwargs) if controls else requests.get(url, **kwargs)
+
+
 def fetch_movers(top: int = 20) -> dict[str, Any]:
-    r = requests.get(
+    r = source_get(
         "https://data.alpaca.markets/v1beta1/screener/stocks/movers",
         headers=alpaca_headers(),
         params={"top": top},
@@ -389,7 +416,8 @@ def fetch_movers(top: int = 20) -> dict[str, Any]:
 
 
 def fetch_news(hours: int = 96) -> dict[str, Any]:
-    return collect_news(alpaca_headers(), hours)
+    return collect_news(alpaca_headers(), hours, get=source_get,
+                        include_content=acceptance_controls() is not None)
 
 
 def fetch_fred_release_calendar(
@@ -407,7 +435,7 @@ def fetch_fred_release_calendar(
     if not FRED_API_KEY:
         raise RuntimeError("FRED_API_KEY is not configured.")
 
-    r = requests.get(
+    r = source_get(
         "https://api.stlouisfed.org/fred/releases/dates",
         params={
             "api_key": FRED_API_KEY,
@@ -460,7 +488,7 @@ def sec_headers() -> dict[str, str]:
 
 
 def fetch_ticker_map() -> dict[str, int]:
-    r = requests.get(
+    r = source_get(
         "https://www.sec.gov/files/company_tickers.json",
         headers=sec_headers(),
         timeout=20,
@@ -482,7 +510,7 @@ def fetch_recent_sec(
 ) -> list[dict[str, Any]]:
     cik10 = str(cik).zfill(10)
 
-    r = requests.get(
+    r = source_get(
         f"https://data.sec.gov/submissions/CIK{cik10}.json",
         headers=sec_headers(),
         timeout=20,
@@ -498,7 +526,14 @@ def fetch_recent_sec(
     accessions = recent.get("accessionNumber") or []
     docs = recent.get("primaryDocument") or []
 
-    cutoff = date.today() - timedelta(days=days)
+    controls = acceptance_controls()
+    if controls and (not isinstance(data.get("filings"), dict)
+            or not isinstance(data["filings"].get("recent"), dict)
+            or any(not isinstance(recent.get(k), list) for k in
+                   ("form", "filingDate", "accessionNumber", "primaryDocument"))
+            or len({len(forms), len(filing_dates), len(accessions), len(docs)}) != 1):
+        raise ValueError("SEC_RESPONSE_UNVERIFIED")
+    cutoff = (controls.day if controls else date.today()) - timedelta(days=days)
     out = []
 
     for form, fdate, accession, doc in zip(
@@ -510,7 +545,12 @@ def fetch_recent_sec(
         try:
             filing_date = date.fromisoformat(fdate)
         except Exception:
+            if controls:
+                raise ValueError("SEC_DATE_UNVERIFIED") from None
             continue
+
+        if controls and filing_date > controls.day:
+            raise ValueError("SEC_FUTURE_FILING_UNVERIFIED")
 
         if filing_date < cutoff or form not in CATALYST_FORMS:
             continue
@@ -525,6 +565,7 @@ def fetch_recent_sec(
             {
                 "source": "SEC EDGAR",
                 "source_type": "regulatory_filing",
+                "issuer_cik": str(cik),
                 "form": form,
                 "filing_date": fdate,
                 "accession": accession,
@@ -898,6 +939,9 @@ def run_scan(
     ):
         raise HTTPException(403, "DATED_EVIDENCE_STAGING_INFRASTRUCTURE_ONLY")
 
+    controls = acceptance_controls()
+    if controls:
+        controls.admit(req, service=os.getenv("RENDER_SERVICE_ID"), database=SUPABASE_URL, ruleset=RULESET_VERSION)
     run_key = make_run_key(req)
     run, created_new = create_run_once(req, run_key)
 
@@ -955,6 +999,7 @@ def run_scan(
     macro_checked_at: str | None = None
     macro_sources: list[str] = []
     news_collection: dict[str, Any] = {"outcome": "PROVIDER_UNAVAILABLE"}
+    news_body = {}
 
     try:
         macro_events = fetch_fred_release_calendar(
@@ -976,7 +1021,7 @@ def run_scan(
         ] = "DATA_UNAVAILABLE"
 
     try:
-        macro_events.extend(collect_ism_calendar(req.session_date))
+        macro_events.extend(collect_ism_calendar(req.session_date, **({"get": source_get} if controls else {})))
         macro_sources.append("ISM_RELEASE_CALENDAR")
         macro_checked_at = datetime.now(timezone.utc).isoformat()
         channel_status["macro_economic_calendar"] = "PARTIAL_MACRO_SOURCES_REVIEW_REQUIRED"
@@ -984,7 +1029,7 @@ def run_scan(
         errors.append("ISM_RELEASE_CALENDAR_UNAVAILABLE")
 
     try:
-        macro_events.extend(collect_weekly_calendar(req.session_date))
+        macro_events.extend(collect_weekly_calendar(req.session_date, **({"get": source_get} if controls else {})))
         macro_sources.append("FOREX_FACTORY_WEEKLY_CALENDAR")
         macro_checked_at = datetime.now(timezone.utc).isoformat()
         channel_status["macro_economic_calendar"] = "PARTIAL_MACRO_SOURCES_REVIEW_REQUIRED"
@@ -1038,7 +1083,7 @@ def run_scan(
     premarket = {"items": {}, "collection": {"outcome": "PROVIDER_UNAVAILABLE"}}
     try:
         if req.include_dated_prior_evidence:
-            premarket = collect_premarket_with_prior(alpaca_headers(), req.session_date, phase=req.phase)
+            premarket = collect_premarket_with_prior(alpaca_headers(), req.session_date, phase=req.phase, **({"get": source_get} if controls else {}))
             # The coordinator persists only activity/catalyst leads. Full-universe
             # ledger persistence belongs to the isolated storage acceptance path.
             premarket["collection"]["prior_coverage_rows_persisted_by_coordinator"] = False
@@ -1064,20 +1109,42 @@ def run_scan(
         errors.append("SEC_TICKER_MAP_UNAVAILABLE")
 
     inserted = 0
+    acceptance_rows = []
+    source_collector = None
+    if controls:
+        source_collector = SourceCollector(get=source_get, sec_headers=sec_headers(), now=controls.now)
+        source_collector.index_news(news_body.get("news") or news_body.get("articles") or [])
+    prior_attachments = {}
+    if controls and premarket.get("prior_evidence"):
+        # Validate/hash the entire envelope once, not once per discovered symbol.
+        prior_attachments = attach_prior_evidence({symbol: {} for symbol in symbols}, premarket["prior_evidence"])
 
     for symbol in symbols:
         sec_evidence: list[
             dict[str, Any]
         ] = []
 
+        if controls:
+            controls.sec[symbol] = {"status": "UNAVAILABLE_NO_CIK", "records": 0}
         if symbol in ticker_map:
             try:
+                if controls and (controls.seconds_left("source") <= 0 or controls.source_calls >= controls.source_limit):
+                    raise HTTPException(409, "SOURCE_BUDGET_EXHAUSTED")
                 sec_evidence = fetch_recent_sec(
                     symbol,
                     ticker_map[symbol],
                 )
+                if controls:
+                    controls.sec[symbol] = {"status": "RETRIEVED_REVIEW_REQUIRED" if sec_evidence else "CHECKED_NO_RECENT_FORMS",
+                                            "records": len(sec_evidence),
+                                            "checked_at": controls.now().isoformat(),
+                                            "window_start": (req.session_date-timedelta(days=3)).isoformat(),
+                                            "window_end": req.session_date.isoformat(),
+                                            "document_contents_verified": False}
             except Exception:
                 sec_evidence = []
+                if controls:
+                    controls.sec[symbol] = {"status": "UNAVAILABLE_OR_BUDGET_EXHAUSTED", "records": 0}
 
         evidence = news_by_symbol.get(
             symbol,
@@ -1135,51 +1202,73 @@ def run_scan(
             sec_evidence=sec_evidence,
         )
 
-        try:
-            sb_insert(
-                "strategy_discovery_items",
-                {
-                    "run_id": run["id"],
-                    "symbol": symbol,
-                    "discovered_via": discovered_via,
-                    "mover_snapshot": {
-                        **movers.get(symbol, {}),
-                        **({"premarket_activity": premarket["items"][symbol]}
-                           if symbol in premarket["items"] else {}),
-                    },
-                    "news_evidence": evidence,
-                    "independent_evidence": (
-                        sec_evidence
-                    ),
-                    "catalyst_category": category,
-                    "provisional_tier": None,
-                    "verification_status": (
-                        verification
-                    ),
-                    "promotion_status": (
-                        "REVIEW_REQUIRED"
-                    ),
-                    "notes": (
-                        f"run_class={req.run_class}; "
-                        f"evidence_quality_flags="
-                        f"{quality_flags}; "
-                        "Evidence co-occurrence is "
-                        "not catalyst verification. "
-                        "No automatic catalyst tier, "
-                        "materiality, or cross-source "
-                        "verification assignment."
-                    ),
-                },
-            )
-            inserted += 1
+        row = {
+            "run_id": run["id"],
+            "symbol": symbol,
+            "discovered_via": discovered_via,
+            "mover_snapshot": {
+                **movers.get(symbol, {}),
+                **({"premarket_activity": premarket["items"][symbol]}
+                   if symbol in premarket["items"] else {}),
+            },
+            "news_evidence": evidence,
+            "independent_evidence": (
+                sec_evidence
+            ),
+            "catalyst_category": category,
+            "provisional_tier": None,
+            "verification_status": (
+                verification
+            ),
+            "promotion_status": (
+                "REVIEW_REQUIRED"
+            ),
+            "notes": (
+                f"run_class={req.run_class}; "
+                f"evidence_quality_flags="
+                f"{quality_flags}; "
+                "Evidence co-occurrence is "
+                "not catalyst verification. "
+                "No automatic catalyst tier, "
+                "materiality, or cross-source "
+                "verification assignment."
+            ),
+        }
+        if controls:
+            row["mover_snapshot"]["catalyst_review_packet"] = source_collector.packet(
+                run_key=run_key, symbol=symbol, news_evidence=evidence, sec_evidence=sec_evidence)
+            attachment = prior_attachments.get(symbol, {"dated_prior_session_evidence": {
+                "status": "UNAVAILABLE", "reason": "COLLECTOR_UNAVAILABLE"}})
+            row["mover_snapshot"]["dated_prior_session_evidence"] = attachment["dated_prior_session_evidence"]
+            row["mover_snapshot"]["discovery_trace"] = {
+                "record_kind": "DISCOVERY_LEAD", "run_key": run_key,
+                "strategy_evidence_eligible": False, "sec_collection": controls.sec[symbol],
+                "source_ids": [str(i.get("alpaca_news_id")) for i in evidence],
+                "same_event_verified": False, "underlying_event_time_verified": False,
+                "evidence_review": "REVIEW_REQUIRED"}
+            acceptance_rows.append(row)
+        else:
+            try:
+                sb_insert("strategy_discovery_items", row)
+                inserted += 1
+            except HTTPException:
+                raise
+            except Exception:
+                pass
 
-        except HTTPException:
-            raise
-
-        except Exception:
-            # Preserve the scan even if one individual
-            # discovery item fails to persist.
-            pass
+    if controls:
+        controls.coverage = coverage_ledger(news_collection, premarket, macro_sources, errors, news_by_symbol,
+            controls.sec, news_body.get("news") or news_body.get("articles") or [])
+        controls.coverage["checked_at"] = controls.now().isoformat()
+        controls.coverage["source_documents"] = source_collector.summary()
+        assigned_ids = {"ALPACA_NEWS:"+str(item.get("alpaca_news_id"))
+                        for evidence in news_by_symbol.values() for item in evidence}
+        controls.coverage["unassigned_news_content"] = [record for key, record in source_collector.news.items()
+                                                        if key not in assigned_ids]
+        stored = controls.persist(acceptance_rows, headers=sb_headers())
+        inserted = stored["acknowledged_count"]
+        channel_status = {k: v["status"] for k, v in controls.coverage["channels"].items()}
+        channel_status["cross_source_verification"] = "REVIEW_REQUIRED"
 
     status = "PARTIAL"
 
@@ -1206,6 +1295,19 @@ def run_scan(
             " Errors: "
             + " | ".join(errors[:5])
         )
+
+    if controls:
+        notes = json.dumps({"request_identity": controls.identity, "strategy_evidence_eligible": False,
+            "run_class": "INFRASTRUCTURE_TEST", "normal_coordinator_path": True,
+            "coverage": controls.coverage, "storage": controls.storage,
+            "collection_manifest": premarket.get("collection", {}),
+            "universe_coverage_rows_persisted": False,
+            "candidate_count_semantics": "ACKNOWLEDGED_DISCOVERY_LEADS_NOT_QUALIFIED_CANDIDATES",
+            "full_discovery_accepted": False, "source_calls": controls.source_calls,
+            "macro_events": macro_events, "limitations": [
+                "Source retrieval is not catalyst or channel verification.",
+                "No Journal delivery or experiment observations.",
+                "Universe manifest retained; per-symbol coverage-only rows not persisted by coordinator."]}, sort_keys=True)
 
     persisted_run = finalize_discovery_run(
         run_key,
@@ -1237,6 +1339,9 @@ def run_scan(
         "idempotent_replay": False,
         "automatic_major_macro_classification": False,
         "automatic_promotion": False,
+        **({"storage_verified": controls.storage["storage_verified"],
+            "coverage": controls.coverage, "strategy_evidence_eligible": False,
+            "full_discovery_accepted": False} if controls else {}),
     }
 
 
@@ -1430,6 +1535,8 @@ def discovery_context(item_id: str):
 
 
 def reserve_artifact(item_id: str, column: str, record: dict[str, Any]):
+    if acceptance_controls():
+        raise HTTPException(403, "REVIEW_MUTATIONS_DISABLED_DURING_ACCEPTANCE")
     """Claim an immutable artifact atomically; conflicting concurrent writes fail closed."""
     r = requests.patch(f"{SUPABASE_URL.rstrip('/')}/rest/v1/strategy_discovery_items",
                        headers=sb_headers(),
@@ -1444,6 +1551,8 @@ def reserve_artifact(item_id: str, column: str, record: dict[str, Any]):
     return rows[0]
 
 def qualify_item(item_id: str, review: QualificationRequest):
+    if acceptance_controls():
+        raise HTTPException(403, "QUALIFICATION_DISABLED_DURING_ACCEPTANCE")
     item, run = discovery_context(item_id)
     payload = review.model_dump(mode="json")
     existing = item.get("qualification_review")
@@ -1468,6 +1577,8 @@ def qualify_item(item_id: str, review: QualificationRequest):
 
 
 def construct_setup(item_id: str, setup: SetupRequest):
+    if acceptance_controls():
+        raise HTTPException(403, "SETUP_DISABLED_DURING_ACCEPTANCE")
     item, run = discovery_context(item_id)
     if run.get("experiment_class") not in ("STRATEGY_1", "INFRASTRUCTURE_TEST"):
         raise HTTPException(status_code=409, detail="Historical run lacks structured class; explicit reconciliation required.")
