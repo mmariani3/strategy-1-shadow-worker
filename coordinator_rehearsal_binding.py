@@ -189,16 +189,22 @@ def rehearse(permit, *, connections, evidence_directory, now, monotonic=time.mon
             need(abs((now()-wall).total_seconds()-(monotonic()-began))<=5,'REHEARSAL_CLOCK_DRIFT')
             need(monotonic()-began<8*60,'REHEARSAL_BUDGET')
             sleep(min(1,(permit.suspend_at-now()).total_seconds()))
-        while now()<permit.verify_by:
+        # Reserve time for complete DB readback and asynchronous database pause.
+        # Missing evidence cannot consume the entire overall cleanup budget.
+        proof_deadline=min(permit.suspend_at+timedelta(seconds=30),permit.verify_by-timedelta(minutes=4))
+        while now()<proof_deadline:
             try:
-                services=connections.render.inventory(); isolation(services)
                 proof=connections.watchdog_result(nonce)
+            except FileNotFoundError:
+                # Only a not-yet-written result is pending. A present but
+                # invalid receipt is terminal and needs immediate cleanup.
+                need(monotonic()-began<8*60,'REHEARSAL_BUDGET')
+                sleep(1)
+            else:
+                services=connections.render.inventory(); isolation(services)
                 consume(root/(prefix+'.watchdog-result.json'),proof)
                 result['watchdog_suspension']='PROVIDER_READBACK_WITHOUT_PARENT_SUSPEND'
                 break
-            except Exception:
-                need(monotonic()-began<8*60,'REHEARSAL_BUDGET')
-                sleep(1)
         need(result['watchdog_suspension']!='NOT_VERIFIED','REHEARSAL_WATCHDOG_NOT_VERIFIED')
         after=connections.database.collect()
         need(after['schema_sha256']==permit.schema_hash and preservation_baseline(after)==baseline,

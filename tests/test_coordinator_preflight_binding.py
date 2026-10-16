@@ -293,3 +293,60 @@ def test_render_rehearsal_child_fails_before_http(rehearsal,monkeypatch,case):
               'changed_files':'WATCHDOG_PACKAGE_CHANGED'}[case]
     with pytest.raises(ValueError,match=expected): module.child(envelope)
     assert not list(r.path.glob('*.watchdog-ready.json'))
+
+
+def test_watchdog_setup_latency_cannot_advance_suspension(rehearsal,monkeypatch):
+    """Regression for the real October 15 early receipt. No hosted requests."""
+    import coordinator_watchdog_process as module
+    import coordinator_service_adapters as adapters
+    from datetime import datetime
+    r=rehearsal; root=Path(module.__file__).parent
+    files=tuple((n,hashlib.sha256((root/n).read_bytes()).hexdigest()) for n in sorted(REQUIRED_FILES))
+    p=replace(r.p,files=files,source_hash=source_hash(root))
+    tick=[0.0]; wall=[p.not_before]; suspensions=[]
+    def advance(seconds):
+        tick[0]+=seconds; wall[0]+=timedelta(seconds=seconds)
+    class Clock(datetime):
+        @classmethod
+        def now(cls,tz=None): return wall[0]
+    original_validate=RehearsalPermit.validate
+    def slow_validate(self,instant):
+        advance(.75)  # import/source/permit validation latency before cutoff
+        return original_validate(self,instant)
+    class Adapter:
+        def __init__(self,**kwargs): assert kwargs['suspend_only'] is True
+        def target(self): advance(.25)
+        def suspend(self,service):
+            assert service==SERVICE; suspensions.append(wall[0]); return True
+    monkeypatch.setattr(module,'datetime',Clock)
+    monkeypatch.setattr(module.time,'monotonic',lambda:tick[0])
+    monkeypatch.setattr(module.time,'sleep',advance)
+    monkeypatch.setattr(RehearsalPermit,'validate',slow_validate)
+    monkeypatch.setattr(adapters,'RenderAdapter',Adapter)
+    envelope={'service':SERVICE,'nonce':'a'*32,'policy_hash':p.fingerprint,
+        'program_sha256':hashlib.sha256(Path(module.__file__).read_bytes()).hexdigest(),'directory':str(r.path),
+        'mode':'render_rehearsal','policy':p.as_dict(),'render_key':'OFFLINE'}
+    assert module.child(envelope)==0
+    assert suspensions==[p.suspend_at]
+    result=json.loads((r.path/('a'*32+'.watchdog-result.json')).read_text())
+    assert result['checked_at']==p.suspend_at.isoformat() and result['suspended'] is True
+
+
+def test_invalid_existing_watchdog_receipt_triggers_immediate_cleanup(rehearsal):
+    r=rehearsal; original=r.connections.watchdog.result
+    def early():
+        return {**original(),'checked_at':(r.p.suspend_at-timedelta(seconds=.205635)).isoformat()}
+    r.connections.watchdog.result=early
+    result=r.run()
+    assert result['status']=='REHEARSAL_FAILED_OR_AMBIGUOUS'
+    assert result['authentication']=='PASS' and result['watchdog_suspension']=='NOT_VERIFIED'
+    assert result['cleanup']=='VERIFIED' and result['cleanup_by_deadline']
+    assert r.clock[0]<r.p.suspend_at+timedelta(seconds=30)
+
+
+def test_missing_watchdog_receipt_reserves_database_cleanup_budget(rehearsal):
+    r=rehearsal; r.failures.add('child_proof')
+    result=r.run()
+    assert result['status']=='REHEARSAL_FAILED_OR_AMBIGUOUS'
+    assert result['cleanup']=='VERIFIED' and result['cleanup_by_deadline']
+    assert r.clock[0]==r.p.suspend_at+timedelta(seconds=30)

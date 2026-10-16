@@ -97,11 +97,20 @@ def child(envelope):
     common={'pid':os.getpid(),'nonce':envelope['nonce'],'policy_hash':envelope['policy_hash'],
         'service':SERVICE,'program_sha256':source_hash,'mode':mode,
         'suspend_at':deadline.isoformat(),'verify_by':verify_by.isoformat()}
-    while time.monotonic()<cutoff and now()<deadline:
+    # Bind both clocks AFTER source verification and authenticated setup. Using
+    # the process-start monotonic value with a later wall time subtracts setup
+    # latency twice and can suspend before the authorized wall-clock deadline.
+    anchor=time.monotonic()
+    cutoff=anchor+max(0,(deadline-now()).total_seconds())
+    finish=anchor+max(0,(verify_by-now()).total_seconds())
+    # Wall time is the admission boundary. Monotonic time bounds a backward
+    # clock jump; crossing that bound suspends for safety, but cannot satisfy
+    # the parent's timestamp acceptance check while wall time is still early.
+    while now()<deadline and time.monotonic()<cutoff+5:
         atomic(ready,{**common,'heartbeat_at':now().isoformat()})
         # No caller-created stop file can disable the cleanup deadline. Parent
         # may terminate using its process handle only after verified cleanup.
-        time.sleep(min(pause,max(0,cutoff-time.monotonic())))
+        time.sleep(min(pause,max(.001,(deadline-now()).total_seconds())))
     suspended=False; attempts=0
     while time.monotonic()<finish and now()<verify_by and attempts<6:
         attempts+=1
