@@ -2,6 +2,7 @@
 from datetime import date, datetime, timedelta, timezone
 from html.parser import HTMLParser
 import re
+import json
 import time
 from zoneinfo import ZoneInfo
 
@@ -14,12 +15,16 @@ NEWS_MAX_PAGES = 10
 NEWS_BUDGET_SECONDS = 45
 
 
-def collect_news(headers, hours, *, end=None, get=None, clock=None):
+class NewsBudgetError(ValueError):
+    pass
+
+
+def collect_news(headers, hours, *, end=None, get=None, clock=None, include_content=False):
     get, clock = get or requests.get, clock or time.monotonic
     end = end or datetime.now(timezone.utc)
     start = end - timedelta(hours=hours)
     params = {"start": start.isoformat(), "end": end.isoformat(),
-              "sort": "desc", "limit": 50, "include_content": "false"}
+              "sort": "desc", "limit": 50, "include_content": "true" if include_content else "false"}
     deadline = clock() + NEWS_BUDGET_SECONDS
     articles, ids, tokens = [], set(), set()
     pages, outcome = 0, "PAGE_LIMIT"
@@ -32,11 +37,28 @@ def collect_news(headers, hours, *, end=None, get=None, clock=None):
         try:
             response = get(NEWS_URL, headers=headers, params=dict(params),
                            timeout=(min(3, remaining), min(10, remaining)),
+                           **({"stream": True} if include_content else {}),
                            allow_redirects=False)
             if response.status_code != 200:
+                if include_content:
+                    response.close()
                 outcome = "PROVIDER_UNAVAILABLE"
                 break
-            body = response.json()
+            if include_content:
+                # Bound content-bearing responses before decoding/parsing.
+                try:
+                    raw = bytearray()
+                    for chunk in response.iter_content(16384):
+                        if clock() >= deadline:
+                            raise NewsBudgetError("TIME_BUDGET")
+                        if len(raw)+len(chunk) > 2*1024*1024:
+                            raise NewsBudgetError("BODY_LIMIT")
+                        raw.extend(chunk)
+                    body = json.loads(raw)
+                finally:
+                    response.close()
+            else:
+                body = response.json()
             batch = body["news"]
             token = body.get("next_page_token")
             if (not isinstance(batch, list) or len(batch) > 50
@@ -62,6 +84,9 @@ def collect_news(headers, hours, *, end=None, get=None, clock=None):
                 break
             tokens.add(token)
             params["page_token"] = token
+        except NewsBudgetError as exc:
+            outcome = str(exc)
+            break
         except Exception:
             outcome = "PROVIDER_UNAVAILABLE"
             break
@@ -73,6 +98,7 @@ def collect_news(headers, hours, *, end=None, get=None, clock=None):
         "full_discovery_coverage": False,
         "sort_basis": "PROVIDER_UPDATED_AT",
         "event_freshness_verified": False,
+        "content_requested": include_content,
     }}
 
 
@@ -138,8 +164,8 @@ def parse_ism_calendar(document, session_date):
     return events
 
 
-def collect_ism_calendar(session_date):
-    response = requests.get(ISM_URL, timeout=(3, 10), allow_redirects=False)
+def collect_ism_calendar(session_date, *, get=None):
+    response = (get or requests.get)(ISM_URL, timeout=(3, 10), allow_redirects=False)
     if response.status_code != 200 or len(response.content) > 2_000_000:
         raise ValueError("ISM calendar unavailable")
     return parse_ism_calendar(response.text, session_date)
@@ -196,9 +222,9 @@ def parse_weekly_calendar(body, session_date, *, checked_at):
     return result
 
 
-def collect_weekly_calendar(session_date):
+def collect_weekly_calendar(session_date, *, get=None):
     checked_at = datetime.now(timezone.utc)
-    with requests.get(FOREX_FACTORY_URL, timeout=(3, 10), allow_redirects=False, stream=True) as response:
+    with (get or requests.get)(FOREX_FACTORY_URL, timeout=(3, 10), allow_redirects=False, stream=True) as response:
         if response.status_code != 200:
             raise ValueError("Weekly calendar unavailable")
         raw = bytearray()
