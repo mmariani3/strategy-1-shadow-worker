@@ -18,6 +18,7 @@ import time
 from fastapi import HTTPException
 from coordinator_launch_guard import SERVICE, DATABASE, PACIFIC, REQUIRED_FILES, need, timestamp
 from setup_evidence import digest
+from coordinator_service_adapters import safe_steps, error_diagnostic
 
 DB_URL='https://'+DATABASE+'.supabase.co'
 CALENDAR='https://paper-api.alpaca.markets/v2/calendar'
@@ -25,6 +26,12 @@ QUOTES='https://data.alpaca.markets/v2/stocks/quotes/latest'
 BARS='https://data.alpaca.markets/v2/stocks/bars'
 DB_READ=DB_URL+'/rest/v1/strategy_discovery_runs'
 START_COMMAND='uvicorn coordinator_acceptance_app:create_rehearsal_app --factory --host 0.0.0.0 --port $PORT'
+
+
+class PreflightFailure(HTTPException):
+    def __init__(self, diagnostics):
+        super().__init__(503, 'AUTHENTICATED_PREFLIGHT_UNVERIFIED')
+        self.diagnostics = safe_steps(diagnostics)
 
 
 def source_hash(directory):
@@ -94,6 +101,7 @@ class ReadOnlyProbes:
         try:
             response=self.session.request('GET',url,params=params,headers=headers,
                 timeout=(min(2,remaining),remaining),allow_redirects=False,stream=True)
+            self._probe_status=response.status_code
             need(response.status_code==200,'PROBE_RESPONSE')
             raw=bytearray()
             for chunk in response.iter_content(16384):
@@ -110,9 +118,15 @@ class ReadOnlyProbes:
         if not token or not isinstance(authorization,str) or not hmac.compare_digest(authorization.encode(),('Bearer '+token).encode()):
             raise HTTPException(401,'AUTHENTICATION_REQUIRED')
         if not self.lock.acquire(blocking=False): raise HTTPException(409,'PREFLIGHT_ALREADY_RUNNING')
+        diagnostics=[]; phase='guard'; step_start=self.clock(); self._probe_status=None
+        def completed():
+            diagnostics.append({'phase':phase,'error':'OK','http_status':self._probe_status,
+                                'elapsed_seconds':self.clock()-step_start})
         try:
             self.guard()
+            completed()
             started=self.now(); deadline=self.clock()+20; day=self.permit.day
+            phase='paper_calendar'; step_start=self.clock(); self._probe_status=None
             rows=self.get(CALENDAR,{'start':(day-timedelta(days=30)).isoformat(),'end':day.isoformat()},deadline)
             need(isinstance(rows,list) and 1<len(rows)<=31,'CALENDAR_UNAVAILABLE')
             dates=[date.fromisoformat(row['date']) for row in rows]
@@ -122,11 +136,15 @@ class ReadOnlyProbes:
             need(today['open']=='09:30' and today['close']=='16:00','NONSTANDARD_SESSION')
             prior=max(d for d in dates if d<day)
             eastern=ZoneInfo('America/New_York')
+            completed()
+            phase='sip'; step_start=self.clock(); self._probe_status=None
             quotes=self.get(QUOTES,{'symbols':'SPY','feed':'sip'},deadline)
             quote=quotes['quotes']['SPY']
             timestamp(quote['t'])
             need(all(type(quote[k]) in (int,float) and math.isfinite(quote[k]) and quote[k]>=0
                      for k in ('bp','ap')),'SIP_QUOTE_SHAPE')
+            completed()
+            phase='historical_sip'; step_start=self.clock(); self._probe_status=None
             bars=self.get(BARS,{'symbols':'SPY','timeframe':'1Day',
                 'start':datetime.combine(prior,daytime.min,tzinfo=eastern).isoformat(),
                 'end':datetime.combine(prior,daytime(23,59,59),tzinfo=eastern).isoformat(),
@@ -135,11 +153,16 @@ class ReadOnlyProbes:
             bar=bars['bars']['SPY'][0]
             need(timestamp(bar['t']).astimezone(eastern).date()==prior
                  and type(bar['c']) in (int,float) and math.isfinite(bar['c']) and bar['c']>0,'HISTORICAL_DATE')
+            completed()
+            phase='staging_database'; step_start=self.clock(); self._probe_status=None
             records=self.get(DB_READ,{'select':'id','limit':'1'},deadline)
             need(isinstance(records,list) and len(records)<=1 and
                  all(set(r)=={'id'} and isinstance(r['id'],str) for r in records),'DATABASE_READ_SHAPE')
+            completed()
+            phase='validation'; step_start=self.clock(); self._probe_status=None
             self.guard()
             need(self.clock()<deadline,'PROBE_DEADLINE')
+            completed()
             return {'checked_at':started.isoformat(),'commit':self.permit.commit,'source_hash':self.permit.source_hash,
                 'session_date':day.isoformat(),'database_id':DATABASE,'mode':'SHADOW',
                 'broker_execution_enabled':False,'qualification_enabled':False,'journal_enabled':False,
@@ -147,9 +170,12 @@ class ReadOnlyProbes:
                 'authenticated_probes':{k:'AUTHENTICATED_READ_ONLY' for k in
                     ('paper_calendar','sip','historical_sip','staging_database')},
                 'historical_prior_session':prior.isoformat(),'reference_price_approved':False,
+                'diagnostics':safe_steps(diagnostics),
                 'database_read_scope':'ONE_ROW_ACCESS_ONLY_NOT_SCHEMA_OR_INTEGRITY_ACCEPTANCE'}
-        except Exception:
-            raise HTTPException(503,'AUTHENTICATED_PREFLIGHT_UNVERIFIED') from None
+        except Exception as exc:
+            diagnostics.append({'phase':phase, **error_diagnostic(exc,status=self._probe_status,
+                                elapsed=self.clock()-step_start)})
+            raise PreflightFailure(diagnostics) from None
         finally:
             self.lock.release()
 

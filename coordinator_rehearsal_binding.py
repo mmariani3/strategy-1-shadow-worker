@@ -14,7 +14,7 @@ import uuid
 
 from coordinator_launch_guard import SERVICE, DATABASE, URL, MASTERS, REQUIRED_FILES, PACIFIC, need, fresh, isolation, timestamp
 from coordinator_runtime_preflight import source_hash
-from coordinator_service_adapters import FixedHTTP
+from coordinator_service_adapters import FixedHTTP, AdapterError, error_diagnostic, safe_steps
 from coordinator_acceptance_controller import consume, snapshot_baseline
 from setup_evidence import digest
 from coordinator_connector_snapshot import KIND, preservation_baseline
@@ -72,8 +72,44 @@ class RehearsalPermit:
 class ReadOnlyRuntimeClient:
     def __init__(self, *, session, token, expires_at, now):
         self.http=FixedHTTP(session=session,token=token,expires_at=expires_at,now=now,
-                           allowed={('GET',URL+'/acceptance/preflight')})
-    def probe(self): return self.http.call('GET',URL+'/acceptance/preflight',seconds=25)
+                           allowed={('GET',URL+'/health'),('GET',URL+'/acceptance/preflight')})
+    def health(self): return self.http.call('GET',URL+'/health',seconds=3,max_bytes=16384)
+    def probe(self):
+        return self.http.call('GET',URL+'/acceptance/preflight',seconds=25,
+                              max_bytes=65536,preflight_diagnostics=True)
+
+    def wait_ready(self, *, deadline, now, monotonic, sleep):
+        """Only health GETs retry. Health is never provider authentication."""
+        start=monotonic(); wall=now(); attempts=0
+        self.readiness_steps=[]
+        while attempts<15:
+            remaining=(deadline-now()).total_seconds()
+            need(remaining>6 and monotonic()-start<30,'REHEARSAL_READINESS_EXHAUSTED')
+            need(abs((now()-wall).total_seconds()-(monotonic()-start))<=5,'REHEARSAL_CLOCK_DRIFT')
+            attempts+=1
+            call_start=monotonic()
+            try:
+                data=self.health()
+            except AdapterError as exc:
+                self.readiness_steps.append({'phase':'readiness',**error_diagnostic(
+                    exc,elapsed=monotonic()-call_start)})
+                # Only cold-start transport/unavailable responses may retry.
+                retry=(exc.diagnostic['error'] in
+                       {'CONNECT_TIMEOUT','READ_TIMEOUT','TIMEOUT','CONNECTION_FAILED'} or
+                       exc.diagnostic['error']=='HTTP_STATUS' and exc.diagnostic['http_status'] in {502,503,504})
+                if not retry: raise
+                if attempts==15 or (deadline-now()).total_seconds()<=7: raise
+                sleep(min(2,max(0,(deadline-now()).total_seconds()-6)))
+                continue
+            self.readiness_steps.append({'phase':'readiness','error':'OK','http_status':200,
+                                        'elapsed_seconds':monotonic()-call_start})
+            need(now()<deadline and monotonic()-start<30,'REHEARSAL_READINESS_EXHAUSTED')
+            need(type(data) is dict and data.get('mode')=='SHADOW'
+                 and all(data.get(k) is False for k in ('broker_execution_enabled','qualification_routes',
+                     'journal_routes','automatic_promotion','strategy_evidence_eligible','launch_verifier_installed'))
+                 and data.get('readiness')=='NOT_HOSTED_ACCEPTED','REHEARSAL_HEALTH_SAFETY')
+            return {'status':'HTTP_READY_ONLY_NOT_AUTHENTICATED','attempts':attempts}
+        need(False,'REHEARSAL_READINESS_EXHAUSTED')
 
 
 class RehearsalConnections:
@@ -164,24 +200,53 @@ def rehearse(permit, *, connections, evidence_directory, now, monotonic=time.mon
             'deployment':permit.deployment,'permit_hash':permit.fingerprint,'started_at':now().isoformat(),
             'notification_delivery':'NOT_TESTED_NO_MESSAGES_SENT'}
     nonce=uuid.uuid4().hex; owns=False; baseline=None; began=monotonic(); wall=now(); watchdog_started=False
+    result['diagnostics']=[]
+    def step(phase, operation):
+        started=monotonic()
+        try:
+            value=operation()
+        except Exception as exc:
+            result['diagnostics'].append({'phase':phase, **error_diagnostic(exc,elapsed=monotonic()-started)})
+            if type(exc) is AdapterError and exc.provider_steps:
+                result['provider_diagnostics']=safe_steps(exc.provider_steps)
+            result.setdefault('failure_phase',phase)
+            raise
+        else:
+            result['diagnostics'].append({'phase':phase,'error':'OK','http_status':None,
+                                          'elapsed_seconds':round(monotonic()-started,3)})
+            return value
+        finally:
+            result['diagnostics']=result['diagnostics'][-64:]
+    def startup_budget(seconds):
+        need(abs((now()-wall).total_seconds()-(monotonic()-began))<=5,'REHEARSAL_CLOCK_DRIFT')
+        need((permit.suspend_at-now()).total_seconds()>seconds,'REHEARSAL_STARTUP_BUDGET')
     try:
         need(connections.permit==permit,'REHEARSAL_CONNECTION_PERMIT')
         permit.validate(now())
         need(permit.not_before<=now()<permit.not_before+timedelta(seconds=30),'REHEARSAL_START_WINDOW')
         consume(root/(prefix+'.attempt.json'),{'scope':result['scope'],'permit_hash':permit.fingerprint,'at':now().isoformat()})
         owns=True
-        data=connections.observe(); baseline=preservation_baseline(data)
+        data=step('observe',connections.observe); baseline=preservation_baseline(data)
         consume(root/(prefix+'.baseline.json'),{'baseline':baseline,'evidence':data})
         need(now()<permit.suspend_at-timedelta(seconds=30),'REHEARSAL_PREPARATION_LATE')
+        # Resume has two HTTP operations (up to 5+20 seconds each).
+        # Reserve 10s minimum readiness, 5+25s probe and 10s safety margin.
+        step('validation',lambda:startup_budget(100))
         watchdog_started=True
-        receipt=connections.start_watchdog(nonce)
+        receipt=step('watchdog_start',lambda:connections.start_watchdog(nonce))
         need(receipt['pid']!=os.getpid(),'REHEARSAL_WATCHDOG_INDEPENDENCE')
         consume(root/(prefix+'.watchdog-ready.json'),receipt)
-        need(now()<permit.suspend_at-timedelta(seconds=30),'REHEARSAL_RESUME_LATE')
-        connections.render.resume(SERVICE)
-        runtime=connections.probe()
+        step('validation',lambda:startup_budget(100))
+        step('resume',lambda:connections.render.resume(SERVICE))
+        step('validation',lambda:startup_budget(50))
+        deadline=min(now()+timedelta(seconds=30),permit.suspend_at-timedelta(seconds=40))
+        result['readiness']=step('readiness',lambda:connections.runtime.wait_ready(
+            deadline=deadline,now=now,monotonic=monotonic,sleep=sleep))
+        step('validation',lambda:startup_budget(40))
+        runtime=step('authentication',connections.probe)
         need(now()<permit.suspend_at,'REHEARSAL_PROBE_LATE')
         result['authentication']='PASS'
+        result['provider_diagnostics']=safe_steps(runtime.get('diagnostics'))
         consume(root/(prefix+'.runtime.json'),runtime)
         # Let the independent watchdog perform the suspension. Parent does not
         # suspend before its deadline unless a failure requires early cleanup.
@@ -206,7 +271,7 @@ def rehearse(permit, *, connections, evidence_directory, now, monotonic=time.mon
                 result['watchdog_suspension']='PROVIDER_READBACK_WITHOUT_PARENT_SUSPEND'
                 break
         need(result['watchdog_suspension']!='NOT_VERIFIED','REHEARSAL_WATCHDOG_NOT_VERIFIED')
-        after=connections.database.collect()
+        after=step('database_readback',connections.database.collect)
         need(after['schema_sha256']==permit.schema_hash and preservation_baseline(after)==baseline,
              'REHEARSAL_DATABASE_CHANGED')
         result['database_unchanged']=True
@@ -217,27 +282,28 @@ def rehearse(permit, *, connections, evidence_directory, now, monotonic=time.mon
     except Exception:
         result['status']='REHEARSAL_FAILED_OR_AMBIGUOUS'
     finally:
+        result['readiness_diagnostics']=safe_steps(getattr(connections.runtime,'readiness_steps',None))
         if owns:
             try:
-                connections.render.suspend(SERVICE)
+                step('cleanup_suspend',lambda:connections.render.suspend(SERVICE))
             except Exception: pass
             try:
-                rows=connections.render.inventory(); isolation(rows)
+                rows=step('cleanup_inventory',connections.render.inventory); isolation(rows)
                 # Preserve independent DB readback even on early failure, before pause.
                 if baseline is not None and not result['database_unchanged']:
                     try:
-                        after=connections.database.collect()
+                        after=step('cleanup_readback',connections.database.collect)
                         result['database_unchanged']=(after['schema_sha256']==permit.schema_hash
                             and preservation_baseline(after)==baseline)
                         consume(root/(prefix+'.failure-readback.json'),after)
                     except Exception: result['failure_readback']='UNVERIFIED'
-                try: connections.pause_project(DATABASE)
+                try: step('cleanup_pause',lambda:connections.pause_project(DATABASE))
                 except Exception: pass
                 # Supabase pause is asynchronous. Request it once, then poll
                 # status only within the existing cleanup deadline/budget.
                 while True:
                     try:
-                        status=connections.project_status(); fresh(status['checked_at'],now(),30)
+                        status=step('cleanup_status',connections.project_status); fresh(status['checked_at'],now(),30)
                         need(status['id']==DATABASE,'REHEARSAL_DB_CLEANUP')
                         if status['status']=='INACTIVE': break
                     except Exception:
@@ -250,8 +316,8 @@ def rehearse(permit, *, connections, evidence_directory, now, monotonic=time.mon
                 if not result['cleanup_by_deadline']: result['status']='CLEANUP_DEADLINE_MISSED'
                 consume(root/(prefix+'.cleanup.json'),{'services':rows,'database':status,'checked_at':now().isoformat()})
                 if watchdog_started:
-                    stopped=connections.watchdog.stop_after_cleanup(services=rows,
-                        database={'id':DATABASE,'status':'INACTIVE'},checked_at=now().isoformat())
+                    stopped=step('cleanup_watchdog',lambda:connections.watchdog.stop_after_cleanup(services=rows,
+                        database={'id':DATABASE,'status':'INACTIVE'},checked_at=now().isoformat()))
                     need(stopped=={'nonce':nonce,'process_exited':True},'REHEARSAL_WATCHDOG_SHUTDOWN')
                     result['watchdog_shutdown']='VERIFIED'
             except Exception:

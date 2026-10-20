@@ -10,6 +10,8 @@ import hashlib
 import json
 from pathlib import Path
 import time
+import math
+from requests.exceptions import ConnectTimeout, ReadTimeout, ConnectionError as HTTPConnectionError
 
 from coordinator_launch_guard import SERVICE, WORKSPACE, DATABASE, URL, REQUIRED_FILES, need, fresh
 from coordinator_acceptance_controller import snapshot_baseline
@@ -22,7 +24,53 @@ TABLES = ("strategy_discovery_runs", "strategy_discovery_items", "strategy_disco
 
 
 class AdapterError(RuntimeError):
-    pass
+    def __init__(self, code="ADAPTER_UNAVAILABLE", *, diagnostic=None, provider_steps=None):
+        super().__init__(code)
+        self.diagnostic = safe_diagnostic(diagnostic)
+        self.provider_steps = safe_steps(provider_steps)
+
+
+ERRORS = frozenset({"OK", "CONNECT_TIMEOUT", "READ_TIMEOUT", "TIMEOUT", "CONNECTION_FAILED",
+                   "HTTP_STATUS", "INVALID_JSON", "GUARD_REJECTED", "UNAVAILABLE"})
+PHASES = frozenset({"guard", "paper_calendar", "sip", "historical_sip", "staging_database",
+                    "validation", "observe", "watchdog_start", "resume", "readiness",
+                    "authentication", "watchdog_proof", "database_readback", "cleanup_suspend",
+                    "cleanup_inventory", "cleanup_readback", "cleanup_pause", "cleanup_status",
+                    "cleanup_watchdog"})
+
+
+def safe_diagnostic(value):
+    """Rebuild from primitives; never serialize a supplied exception or body."""
+    value = value if type(value) is dict else {}
+    error = value.get("error")
+    status = value.get("http_status")
+    elapsed = value.get("elapsed_seconds")
+    return {"error": error if type(error) is str and error in ERRORS else "UNAVAILABLE",
+            "http_status": status if type(status) is int and 100 <= status <= 599 else None,
+            "elapsed_seconds": round(elapsed, 3) if type(elapsed) in (int, float)
+                and math.isfinite(elapsed) and 0 <= elapsed <= 900 else None}
+
+
+def safe_steps(value):
+    if type(value) is not list: return []
+    return [{"phase": row["phase"], **safe_diagnostic(row)}
+            for row in value[:32] if type(row) is dict and type(row.get("phase")) is str
+            and row["phase"] in PHASES]
+
+
+def error_diagnostic(exc, *, status=None, elapsed=None):
+    if type(exc) is AdapterError:
+        return safe_diagnostic({**exc.diagnostic, "elapsed_seconds": elapsed})
+    if isinstance(exc, ConnectTimeout): code = "CONNECT_TIMEOUT"
+    elif isinstance(exc, ReadTimeout): code = "READ_TIMEOUT"
+    elif isinstance(exc, TimeoutError): code = "TIMEOUT"
+    elif isinstance(exc, HTTPConnectionError): code = "CONNECTION_FAILED"
+    elif isinstance(exc, json.JSONDecodeError): code = "INVALID_JSON"
+    elif status is not None and status != 200: code = "HTTP_STATUS"
+    else:
+        from coordinator_launch_guard import Blocked
+        code = "GUARD_REJECTED" if isinstance(exc, Blocked) else "UNAVAILABLE"
+    return safe_diagnostic({"error": code, "http_status": status, "elapsed_seconds": elapsed})
 
 
 def fail(code="ADAPTER_UNAVAILABLE"):
@@ -48,25 +96,37 @@ class FixedHTTP:
             need(retries.total == 0 and retries.redirect in (None, 0), "HTTP_RETRY_ADAPTER_REJECTED")
         need(isinstance(token,str) and bool(token) and expires_at.tzinfo is not None, "CREDENTIAL_UNAVAILABLE")
 
-    def call(self, method, url, *, params=None, body=None, statuses=(200,), seconds=20, max_bytes=4*1024*1024):
+    def call(self, method, url, *, params=None, body=None, statuses=(200,), seconds=20,
+             max_bytes=4*1024*1024, preflight_diagnostics=False):
         response = None
+        start = self.monotonic()
+        status = None
+        provider_steps = []
         try:
             need((method,url) in self.allowed, "HTTP_DESTINATION_REJECTED")
             need(self.now() < self.expires and 0 < seconds <= 900, "HTTP_AUTHORIZATION_EXPIRED")
-            start = self.monotonic()
             response = self.session.request(method, url, params=params, json=body,
                 headers={"Authorization":"Bearer "+self._token, "Accept":"application/json"},
                 timeout=(min(5,seconds), seconds), allow_redirects=False, stream=True)
-            need(response.status_code in statuses, "HTTP_STATUS_REJECTED")
+            status = response.status_code
+            diagnostic_response = (preflight_diagnostics and method == "GET"
+                and url == URL+"/acceptance/preflight" and status == 503)
+            need(status in statuses or diagnostic_response, "HTTP_STATUS_REJECTED")
             raw = bytearray()
             for chunk in response.iter_content(16384):
                 need(self.monotonic()-start < seconds and self.now() < self.expires, "HTTP_DEADLINE")
                 need(isinstance(chunk,bytes) and len(raw)+len(chunk) <= max_bytes, "HTTP_BODY_LIMIT")
                 raw.extend(chunk)
             need(self.monotonic()-start < seconds and self.now() < self.expires, "HTTP_DEADLINE")
-            return json.loads(raw) if raw else None
-        except Exception:
-            fail()  # Never echo tokens, provider text, JSON or request diagnostics.
+            data = json.loads(raw) if raw else None
+            if diagnostic_response:
+                if type(data) is dict and type(data.get("detail")) is dict:
+                    provider_steps = safe_steps(data["detail"].get("diagnostics"))
+                need(False, "HTTP_STATUS_REJECTED")
+            return data
+        except Exception as exc:
+            raise AdapterError(diagnostic=error_diagnostic(exc, status=status,
+                elapsed=self.monotonic()-start), provider_steps=provider_steps) from None
         finally:
             if response is not None:
                 try: response.close()

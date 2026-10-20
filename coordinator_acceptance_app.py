@@ -38,6 +38,11 @@ def create_app(verified_controls_factory=None, *, preflight_service=None):
         try:
             return preflight_service.check(authorization)
         except HTTPException as exc:
+            from coordinator_runtime_preflight import PreflightFailure
+            from coordinator_service_adapters import safe_steps
+            if type(exc) is PreflightFailure:
+                raise HTTPException(503, {"code":"READ_ONLY_PREFLIGHT_UNAVAILABLE",
+                    "diagnostics":safe_steps(exc.diagnostics)}) from None
             raise HTTPException(exc.status_code,"READ_ONLY_PREFLIGHT_UNAVAILABLE") from None
         except Exception:
             raise HTTPException(503,"READ_ONLY_PREFLIGHT_UNAVAILABLE") from None

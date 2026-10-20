@@ -103,8 +103,13 @@ def test_preflight_excludes_concurrent_probes(probes):
 
 def test_preflight_time_budget_rejects_slow_response(probes):
     c,*_=probes
-    ticks=iter([0,0,21])
-    c.clock=lambda:next(ticks)
+    ticks=[0]
+    original=c.session.response
+    def delayed(*a,**kw):
+        ticks[0]+=21
+        return original(*a,**kw)
+    c.clock=lambda:ticks[0]
+    c.session.response=delayed
     with pytest.raises(HTTPException): c.check('Bearer OFFLINE_TOKEN')
     assert len(c.session.calls)==1
 
@@ -172,7 +177,14 @@ def rehearsal(probes,tmp_path):
         return Response(target)
     render=RenderAdapter(session=Session(request),token='OFFLINE_RENDER',expires_at=p.authorized_until,
                          now=lambda:clock[0],rehearsal_only=True)
-    runtime=ReadOnlyRuntimeClient(session=Session(lambda *a,**kw:Response(probe.check('Bearer OFFLINE_TOKEN'))),
+    def runtime_response(method,url,**kw):
+        if url.endswith('/health'):
+            return Response({'mode':'SHADOW','broker_execution_enabled':False,
+                'qualification_routes':False,'journal_routes':False,'automatic_promotion':False,
+                'strategy_evidence_eligible':False,'launch_verifier_installed':False,
+                'readiness':'NOT_HOSTED_ACCEPTED'})
+        return Response(probe.check('Bearer OFFLINE_TOKEN'))
+    runtime=ReadOnlyRuntimeClient(session=Session(runtime_response),
         token='OFFLINE_TOKEN',expires_at=p.authorized_until,now=lambda:clock[0])
     class Watchdog:
         def start(self,envelope): child.update(envelope)
