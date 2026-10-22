@@ -20,6 +20,13 @@ from setup_evidence import digest
 from coordinator_connector_snapshot import KIND, preservation_baseline
 
 
+# Readiness may use spare startup time, never the authentication/safety reserve.
+# A health request has separate 3s connect and 3s read limits. The authenticated
+# request has separate 5s connect and 25s read limits, plus 10s safety margin.
+READINESS_MAX_SECONDS = 60
+AUTHENTICATION_RESERVE_SECONDS = 40
+
+
 @dataclass(frozen=True)
 class RehearsalPermit:
     day: date
@@ -82,9 +89,11 @@ class ReadOnlyRuntimeClient:
         """Only health GETs retry. Health is never provider authentication."""
         start=monotonic(); wall=now(); attempts=0
         self.readiness_steps=[]
+        def remaining():
+            return min((deadline-now()).total_seconds(),
+                       READINESS_MAX_SECONDS-(monotonic()-start))
         while attempts<15:
-            remaining=(deadline-now()).total_seconds()
-            need(remaining>6 and monotonic()-start<30,'REHEARSAL_READINESS_EXHAUSTED')
+            need(remaining()>6,'REHEARSAL_READINESS_EXHAUSTED')
             need(abs((now()-wall).total_seconds()-(monotonic()-start))<=5,'REHEARSAL_CLOCK_DRIFT')
             attempts+=1
             call_start=monotonic()
@@ -98,12 +107,12 @@ class ReadOnlyRuntimeClient:
                        {'CONNECT_TIMEOUT','READ_TIMEOUT','TIMEOUT','CONNECTION_FAILED'} or
                        exc.diagnostic['error']=='HTTP_STATUS' and exc.diagnostic['http_status'] in {502,503,504})
                 if not retry: raise
-                if attempts==15 or (deadline-now()).total_seconds()<=7: raise
-                sleep(min(2,max(0,(deadline-now()).total_seconds()-6)))
+                if attempts==15 or remaining()<=7: raise
+                sleep(min(2,max(0,remaining()-6)))
                 continue
             self.readiness_steps.append({'phase':'readiness','error':'OK','http_status':200,
                                         'elapsed_seconds':monotonic()-call_start})
-            need(now()<deadline and monotonic()-start<30,'REHEARSAL_READINESS_EXHAUSTED')
+            need(remaining()>0,'REHEARSAL_READINESS_EXHAUSTED')
             need(type(data) is dict and data.get('mode')=='SHADOW'
                  and all(data.get(k) is False for k in ('broker_execution_enabled','qualification_routes',
                      'journal_routes','automatic_promotion','strategy_evidence_eligible','launch_verifier_installed'))
@@ -239,10 +248,11 @@ def rehearse(permit, *, connections, evidence_directory, now, monotonic=time.mon
         step('validation',lambda:startup_budget(100))
         step('resume',lambda:connections.render.resume(SERVICE))
         step('validation',lambda:startup_budget(50))
-        deadline=min(now()+timedelta(seconds=30),permit.suspend_at-timedelta(seconds=40))
+        deadline=min(now()+timedelta(seconds=READINESS_MAX_SECONDS),
+                     permit.suspend_at-timedelta(seconds=AUTHENTICATION_RESERVE_SECONDS))
         result['readiness']=step('readiness',lambda:connections.runtime.wait_ready(
             deadline=deadline,now=now,monotonic=monotonic,sleep=sleep))
-        step('validation',lambda:startup_budget(40))
+        step('validation',lambda:startup_budget(AUTHENTICATION_RESERVE_SECONDS))
         runtime=step('authentication',connections.probe)
         need(now()<permit.suspend_at,'REHEARSAL_PROBE_LATE')
         result['authentication']='PASS'
