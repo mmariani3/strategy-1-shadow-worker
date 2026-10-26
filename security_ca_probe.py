@@ -11,6 +11,7 @@ import shutil
 import ssl
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -20,6 +21,27 @@ EXPIRES = datetime(2026, 10, 26, 4, 0, tzinfo=timezone.utc)
 OS_CA = "/etc/ssl/certs/ca-certificates.crt"
 TARGETS = ("https://render.com/", "https://dv-g3b-emudhra.we-have-a-problem.com/", "https://dv-g3b-aaa-emudhra.we-have-a-problem.com/")
 BLOCKED_ROOTS = frozenset({"86a1ecba089c4a8d3bbe2734c612ba341d813e043cf9e8a862cd5c57a36bbe6b", "d7a7a0fb5d7e2731d771e9484ebcdef71d5f0c3e0a2948782bc83ee0ea699ef4"})
+PIP_URL = "https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl"
+PIP_SHA256 = "fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70"
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+def download_pip_wheel(path):
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), urllib.request.HTTPSHandler(context=ssl.create_default_context(cafile=OS_CA)), NoRedirect())
+    with opener.open(PIP_URL, timeout=15) as response:
+        if response.geturl() != PIP_URL:
+            raise RuntimeError("BOOTSTRAP_REDIRECT")
+        data = response.read(2_000_001)
+    if len(data) > 2_000_000 or hashlib.sha256(data).hexdigest() != PIP_SHA256:
+        raise RuntimeError("BOOTSTRAP_WHEEL_HASH")
+    path.write_bytes(data)
+
+def patched_pip_cafile():
+    if importlib.metadata.version("pip") != "26.2.2":
+        raise RuntimeError("PIP_VERSION")
+    return importlib.metadata.distribution("pip").locate_file("pip/_vendor/certifi/cacert.pem")
 
 def now():
     return datetime.now(timezone.utc)
@@ -45,12 +67,17 @@ def build():
     clean = sanitized_environment()
     if not Path(OS_CA).is_file() or roots(OS_CA) & BLOCKED_ROOTS:
         raise RuntimeError("OS_CA_NOT_PATCHED")
-    base = [sys.executable, "-m", "pip", "--isolated", "--disable-pip-version-check", "install", "--no-input", "--no-cache-dir", "--index-url", "https://pypi.org/simple", "--use-deprecated=legacy-certs", "--cert", OS_CA]
-    # The patched native OS bundle is the explicit verified bootstrap trust.
-    # Credentials/proxy configuration are removed from both installer children.
+    base = [sys.executable, "-m", "pip", "--isolated", "--disable-pip-version-check", "install", "--no-input", "--no-cache-dir"]
+    # Do not ask the initial pip to make any network request. Download a fixed
+    # wheel with verified OS TLS and a PyPI-published SHA256, then install offline.
     clean["PIP_CONFIG_FILE"] = os.devnull
-    subprocess.run(base + ["--upgrade", "pip==26.2.2"], env=clean, check=True, timeout=120)
-    subprocess.run(base + ["-r", "requirements.txt"], env=clean, check=True, timeout=180)
+    with tempfile.TemporaryDirectory(prefix="ca-pip-bootstrap-") as folder:
+        wheel = Path(folder) / "pip-26.2.2-py3-none-any.whl"
+        download_pip_wheel(wheel)
+        subprocess.run(base + ["--no-index", "--no-deps", "--upgrade", str(wheel)], env=clean, check=True, timeout=120)
+    if roots(patched_pip_cafile()) & BLOCKED_ROOTS:
+        raise RuntimeError("PIP_VENDORED_CA_NOT_PATCHED")
+    subprocess.run(base + ["--index-url", "https://pypi.org/simple", "--cert", OS_CA, "-r", "requirements.txt"], env=clean, check=True, timeout=180)
     print(json.dumps({"event": "CA_BUILD_COMPLETE", "os_bundle_sha256": hashlib.sha256(Path(OS_CA).read_bytes()).hexdigest(), "bootstrap_verification": "explicit_patched_OS_CA", "credentials_forwarded": False}), flush=True)
 
 def classify_request(url, request):
@@ -90,9 +117,6 @@ def run_checks():
         finally:
             if response is not None:
                 response.close()
-    class NoRedirect(urllib.request.HTTPRedirectHandler):
-        def redirect_request(self, *args, **kwargs):
-            return None
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), urllib.request.HTTPSHandler(context=ssl.create_default_context(cafile=OS_CA)), NoRedirect())
     def stdlib_get(url):
         try:
