@@ -17,7 +17,9 @@ import urllib.error
 import urllib.request
 
 SERVICE = "srv-dal8a2m7bikc73enjn5g"
-EXPIRES = datetime(2026, 10, 26, 4, 0, tzinfo=timezone.utc)
+STARTS = datetime(2026, 11, 3, 2, 0, tzinfo=timezone.utc)
+EXPIRES = datetime(2026, 11, 3, 2, 20, tzinfo=timezone.utc)
+PROBE_VERSION = "ca-acceptance-2026-11-02-v1"
 OS_CA = "/etc/ssl/certs/ca-certificates.crt"
 TARGETS = ("https://render.com/", "https://dv-g3b-emudhra.we-have-a-problem.com/", "https://dv-g3b-aaa-emudhra.we-have-a-problem.com/")
 BLOCKED_ROOTS = frozenset({"86a1ecba089c4a8d3bbe2734c612ba341d813e043cf9e8a862cd5c57a36bbe6b", "d7a7a0fb5d7e2731d771e9484ebcdef71d5f0c3e0a2948782bc83ee0ea699ef4"})
@@ -55,7 +57,7 @@ def sanitized_environment():
     return {key: value for key, value in os.environ.items() if key.upper() in allowed}
 
 def guard():
-    if os.getenv("RENDER") != "true" or os.getenv("RENDER_SERVICE_ID") != SERVICE or now() >= EXPIRES:
+    if os.getenv("RENDER") != "true" or os.getenv("RENDER_SERVICE_ID") != SERVICE or not STARTS <= now() < EXPIRES:
         raise RuntimeError("HOST_OR_TIME_GUARD")
     if os.getenv("ALPACA_API_KEY") or os.getenv("ALPACA_API_SECRET"):
         raise RuntimeError("BROKER_CREDENTIAL_PRESENT")
@@ -134,6 +136,7 @@ def run_checks():
             rows.append({"client": client, "destination": url, "outcome": outcome})
     expected = ["TLS_ACCEPTED", "CERTIFICATE_REJECTED", "CERTIFICATE_REJECTED"] * 2
     return {"event": "CA_SECURITY_RESULT", "service": SERVICE, "commit": os.getenv("RENDER_GIT_COMMIT"), "checked_at": now().isoformat(),
+        "probe_version": PROBE_VERSION, "probe_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "passed": [row["outcome"] for row in rows] == expected, "checks": rows,
         "python": sys.version.split()[0], "openssl": ssl.OPENSSL_VERSION,
         "packages": {d.metadata["Name"]: d.version for d in importlib.metadata.distributions()},
