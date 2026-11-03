@@ -17,9 +17,9 @@ import urllib.error
 import urllib.request
 
 SERVICE = "srv-dal8a2m7bikc73enjn5g"
-STARTS = datetime(2026, 11, 3, 2, 0, tzinfo=timezone.utc)
-EXPIRES = datetime(2026, 11, 3, 2, 20, tzinfo=timezone.utc)
-PROBE_VERSION = "ca-acceptance-2026-11-02-v1"
+STARTS = datetime(2026, 11, 4, 14, 0, tzinfo=timezone.utc)
+EXPIRES = datetime(2026, 11, 4, 14, 20, tzinfo=timezone.utc)
+PROBE_VERSION = "ca-acceptance-2026-11-04-v1"
 OS_CA = "/etc/ssl/certs/ca-certificates.crt"
 TARGETS = ("https://render.com/", "https://dv-g3b-emudhra.we-have-a-problem.com/", "https://dv-g3b-aaa-emudhra.we-have-a-problem.com/")
 BLOCKED_ROOTS = frozenset({"86a1ecba089c4a8d3bbe2734c612ba341d813e043cf9e8a862cd5c57a36bbe6b", "d7a7a0fb5d7e2731d771e9484ebcdef71d5f0c3e0a2948782bc83ee0ea699ef4"})
