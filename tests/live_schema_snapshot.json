@@ -1,0 +1,1529 @@
+{
+  "columns": [
+    {
+      "udt_name": "uuid",
+      "table_name": "strategy_candidate_events",
+      "column_name": "id",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()",
+      "ordinal_position": 1
+    },
+    {
+      "udt_name": "uuid",
+      "table_name": "strategy_candidate_events",
+      "column_name": "candidate_id",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 2
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_candidate_events",
+      "column_name": "created_at",
+      "is_nullable": "NO",
+      "column_default": "now()",
+      "ordinal_position": 3
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidate_events",
+      "column_name": "event_type",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 4
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_candidate_events",
+      "column_name": "event_at",
+      "is_nullable": "NO",
+      "column_default": "now()",
+      "ordinal_position": 5
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidate_events",
+      "column_name": "market_data_source",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 6
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_candidate_events",
+      "column_name": "data_timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 7
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_candidate_events",
+      "column_name": "observed_price",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 8
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_candidate_events",
+      "column_name": "payload",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "ordinal_position": 9
+    },
+    {
+      "udt_name": "uuid",
+      "table_name": "strategy_candidates",
+      "column_name": "id",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()",
+      "ordinal_position": 1
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_candidates",
+      "column_name": "created_at",
+      "is_nullable": "NO",
+      "column_default": "now()",
+      "ordinal_position": 2
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_candidates",
+      "column_name": "updated_at",
+      "is_nullable": "NO",
+      "column_default": "now()",
+      "ordinal_position": 3
+    },
+    {
+      "udt_name": "date",
+      "table_name": "strategy_candidates",
+      "column_name": "session_date",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 4
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "discovery_phase",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 5
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "symbol",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 6
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "direction",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 7
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "status",
+      "is_nullable": "NO",
+      "column_default": "'WAITING'::text",
+      "ordinal_position": 8
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "active",
+      "is_nullable": "NO",
+      "column_default": "true",
+      "ordinal_position": 9
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "ruleset_version",
+      "is_nullable": "NO",
+      "column_default": "'v0.3'::text",
+      "ordinal_position": 10
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "market_data_source",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 11
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "consolidated_data",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 12
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "consolidated_data_required",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 13
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "market_regime",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 14
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "market_context_ok",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 15
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "liquidity_ok",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 16
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "participation_ok",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 17
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "relative_strength_ok",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 18
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "price_extended_or_chasing",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 19
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "major_macro_event_imminent",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 20
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "stop_would_widen",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 21
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "fomo_or_revenge_motive",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 22
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "target_validated",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 23
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "clean_structure",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 24
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "catalyst_summary",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 25
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "catalyst_tier",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 26
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_candidates",
+      "column_name": "catalyst_event_at",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 27
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "catalyst_material",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 28
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "materiality_rationale",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 29
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "catalyst_verified",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 30
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "catalyst_cross_source_verified",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 31
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_candidates",
+      "column_name": "catalyst_sources",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb",
+      "ordinal_position": 32
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "entry_model",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 33
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "trigger_definition",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 34
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_candidates",
+      "column_name": "trigger_price",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 35
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "trigger_operator",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 36
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_candidates",
+      "column_name": "trigger_observed_at",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 37
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "trigger_confirmed",
+      "is_nullable": "NO",
+      "column_default": "false",
+      "ordinal_position": 38
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_candidates",
+      "column_name": "trigger_confirmed_at",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 39
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "trigger_confirmation_source",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 40
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_candidates",
+      "column_name": "entry_price",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 41
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_candidates",
+      "column_name": "stop_price",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 42
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_candidates",
+      "column_name": "target_price",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 43
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_candidates",
+      "column_name": "realized_daily_loss_dollars",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 44
+    },
+    {
+      "udt_name": "int4",
+      "table_name": "strategy_candidates",
+      "column_name": "executed_trades_today",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 45
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "after_first_minute",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 46
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "missed_trigger",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 47
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "journal_trade_id",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 48
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "last_worker_decision",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 49
+    },
+    {
+      "udt_name": "uuid",
+      "table_name": "strategy_candidates",
+      "column_name": "last_signal_id",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 50
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "notes",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 51
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "experiment_class",
+      "is_nullable": "NO",
+      "column_default": "'STRATEGY_1'::text",
+      "ordinal_position": 52
+    },
+    {
+      "udt_name": "uuid",
+      "table_name": "strategy_candidates",
+      "column_name": "source_discovery_item_id",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 53
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "operational_state",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 54
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_candidates",
+      "column_name": "reason_code",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 55
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_candidates",
+      "column_name": "data_timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 56
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_candidates",
+      "column_name": "data_quality_ok",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 57
+    },
+    {
+      "udt_name": "int4",
+      "table_name": "strategy_candidates",
+      "column_name": "lifecycle_revision",
+      "is_nullable": "NO",
+      "column_default": "0",
+      "ordinal_position": 58
+    },
+    {
+      "udt_name": "uuid",
+      "table_name": "strategy_discovery_items",
+      "column_name": "id",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()",
+      "ordinal_position": 1
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_discovery_items",
+      "column_name": "created_at",
+      "is_nullable": "NO",
+      "column_default": "now()",
+      "ordinal_position": 2
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_discovery_items",
+      "column_name": "updated_at",
+      "is_nullable": "NO",
+      "column_default": "now()",
+      "ordinal_position": 3
+    },
+    {
+      "udt_name": "uuid",
+      "table_name": "strategy_discovery_items",
+      "column_name": "run_id",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 4
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_items",
+      "column_name": "symbol",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 5
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_discovery_items",
+      "column_name": "discovered_via",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb",
+      "ordinal_position": 6
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_discovery_items",
+      "column_name": "mover_snapshot",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "ordinal_position": 7
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_discovery_items",
+      "column_name": "news_evidence",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb",
+      "ordinal_position": 8
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_discovery_items",
+      "column_name": "independent_evidence",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb",
+      "ordinal_position": 9
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_items",
+      "column_name": "catalyst_category",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 10
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_items",
+      "column_name": "provisional_tier",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 11
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_items",
+      "column_name": "verification_status",
+      "is_nullable": "NO",
+      "column_default": "'REVIEW_REQUIRED'::text",
+      "ordinal_position": 12
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_items",
+      "column_name": "materiality_rationale",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 13
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_items",
+      "column_name": "promotion_status",
+      "is_nullable": "NO",
+      "column_default": "'DISCOVERED'::text",
+      "ordinal_position": 14
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_items",
+      "column_name": "rejection_reason",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 15
+    },
+    {
+      "udt_name": "uuid",
+      "table_name": "strategy_discovery_items",
+      "column_name": "orchestrator_candidate_id",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 16
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_items",
+      "column_name": "notes",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 17
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_discovery_items",
+      "column_name": "qualification_review",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 18
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_discovery_items",
+      "column_name": "setup_review",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 19
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_items",
+      "column_name": "operational_state",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 20
+    },
+    {
+      "udt_name": "uuid",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "id",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()",
+      "ordinal_position": 1
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "created_at",
+      "is_nullable": "NO",
+      "column_default": "now()",
+      "ordinal_position": 2
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "updated_at",
+      "is_nullable": "NO",
+      "column_default": "now()",
+      "ordinal_position": 3
+    },
+    {
+      "udt_name": "date",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "session_date",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 4
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "phase",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 5
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "ruleset_version",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 6
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "status",
+      "is_nullable": "NO",
+      "column_default": "'IN_PROGRESS'::text",
+      "ordinal_position": 7
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "channel_status",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "ordinal_position": 8
+    },
+    {
+      "udt_name": "int4",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "candidates_discovered",
+      "is_nullable": "NO",
+      "column_default": "0",
+      "ordinal_position": 9
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "notes",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 10
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "macro_events",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb",
+      "ordinal_position": 11
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "macro_source",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 12
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "macro_checked_at",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 13
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_discovery_runs",
+      "column_name": "run_key",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 14
+    },
+    {
+      "udt_name": "uuid",
+      "table_name": "strategy_signals",
+      "column_name": "id",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()",
+      "ordinal_position": 1
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_signals",
+      "column_name": "created_at",
+      "is_nullable": "NO",
+      "column_default": "now()",
+      "ordinal_position": 2
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_signals",
+      "column_name": "updated_at",
+      "is_nullable": "NO",
+      "column_default": "now()",
+      "ordinal_position": 3
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_signals",
+      "column_name": "evaluated_at",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 4
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_signals",
+      "column_name": "triggered_at",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 5
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "experiment_class",
+      "is_nullable": "NO",
+      "column_default": "'STRATEGY_1'::text",
+      "ordinal_position": 6
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "strategy_id",
+      "is_nullable": "NO",
+      "column_default": "'STRATEGY_1'::text",
+      "ordinal_position": 7
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "decision",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 8
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "status",
+      "is_nullable": "NO",
+      "column_default": "'SHADOW'::text",
+      "ordinal_position": 9
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "ruleset_version",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 10
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "worker_version",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 11
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "symbol",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 12
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "direction",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 13
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "market_regime",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 14
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_signals",
+      "column_name": "market_context_ok",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 15
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "market_data_source",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 16
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_signals",
+      "column_name": "data_timestamp",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 17
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_signals",
+      "column_name": "data_quality_ok",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 18
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_signals",
+      "column_name": "consolidated_data",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 19
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "catalyst_summary",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 20
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "catalyst_tier",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 21
+    },
+    {
+      "udt_name": "timestamptz",
+      "table_name": "strategy_signals",
+      "column_name": "catalyst_event_at",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 22
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_signals",
+      "column_name": "catalyst_sources",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb",
+      "ordinal_position": 23
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_signals",
+      "column_name": "catalyst_verified",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 24
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_signals",
+      "column_name": "catalyst_material",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 25
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_signals",
+      "column_name": "relative_strength_ok",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 26
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_signals",
+      "column_name": "participation_ok",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 27
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_signals",
+      "column_name": "rvol",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 28
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_signals",
+      "column_name": "rvol_consolidated",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 29
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_signals",
+      "column_name": "liquidity_ok",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 30
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "entry_model",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 31
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "trigger_definition",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 32
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_signals",
+      "column_name": "trigger_price",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 33
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_signals",
+      "column_name": "trigger_confirmed",
+      "is_nullable": "NO",
+      "column_default": "false",
+      "ordinal_position": 34
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_signals",
+      "column_name": "entry_price",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 35
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_signals",
+      "column_name": "stop_price",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 36
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_signals",
+      "column_name": "target_price",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 37
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_signals",
+      "column_name": "risk_per_share",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 38
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_signals",
+      "column_name": "planned_rr",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 39
+    },
+    {
+      "udt_name": "int4",
+      "table_name": "strategy_signals",
+      "column_name": "qty",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 40
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_signals",
+      "column_name": "dollar_risk",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 41
+    },
+    {
+      "udt_name": "numeric",
+      "table_name": "strategy_signals",
+      "column_name": "notional",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 42
+    },
+    {
+      "udt_name": "bool",
+      "table_name": "strategy_signals",
+      "column_name": "clean_structure",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 43
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_signals",
+      "column_name": "avoid_conditions",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb",
+      "ordinal_position": 44
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_signals",
+      "column_name": "wait_reasons",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb",
+      "ordinal_position": 45
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_signals",
+      "column_name": "rejection_reasons",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb",
+      "ordinal_position": 46
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_signals",
+      "column_name": "decision_inputs",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb",
+      "ordinal_position": 47
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "journal_trade_id",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 48
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "alpaca_order_id",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 49
+    },
+    {
+      "udt_name": "jsonb",
+      "table_name": "strategy_signals",
+      "column_name": "executor_response",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 50
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "execution_status",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 51
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "error",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 52
+    },
+    {
+      "udt_name": "text",
+      "table_name": "strategy_signals",
+      "column_name": "notes",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 53
+    }
+  ],
+  "indexes": [
+    {
+      "indexdef": "CREATE UNIQUE INDEX strategy_candidate_events_pkey ON public.strategy_candidate_events USING btree (id)",
+      "indexname": "strategy_candidate_events_pkey",
+      "tablename": "strategy_candidate_events"
+    },
+    {
+      "indexdef": "CREATE INDEX idx_strategy_candidate_events_candidate ON public.strategy_candidate_events USING btree (candidate_id, created_at)",
+      "indexname": "idx_strategy_candidate_events_candidate",
+      "tablename": "strategy_candidate_events"
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX strategy_candidates_pkey ON public.strategy_candidates USING btree (id)",
+      "indexname": "strategy_candidates_pkey",
+      "tablename": "strategy_candidates"
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX strategy_candidates_journal_trade_id_key ON public.strategy_candidates USING btree (journal_trade_id)",
+      "indexname": "strategy_candidates_journal_trade_id_key",
+      "tablename": "strategy_candidates"
+    },
+    {
+      "indexdef": "CREATE INDEX idx_strategy_candidates_active_session ON public.strategy_candidates USING btree (active, session_date)",
+      "indexname": "idx_strategy_candidates_active_session",
+      "tablename": "strategy_candidates"
+    },
+    {
+      "indexdef": "CREATE INDEX idx_strategy_candidates_symbol ON public.strategy_candidates USING btree (symbol)",
+      "indexname": "idx_strategy_candidates_symbol",
+      "tablename": "strategy_candidates"
+    },
+    {
+      "indexdef": "CREATE INDEX idx_strategy_candidates_status ON public.strategy_candidates USING btree (status)",
+      "indexname": "idx_strategy_candidates_status",
+      "tablename": "strategy_candidates"
+    },
+    {
+      "indexdef": "CREATE INDEX idx_strategy_candidates_experiment_class ON public.strategy_candidates USING btree (experiment_class)",
+      "indexname": "idx_strategy_candidates_experiment_class",
+      "tablename": "strategy_candidates"
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX strategy_candidates_source_discovery_item_id_uidx ON public.strategy_candidates USING btree (source_discovery_item_id) WHERE (source_discovery_item_id IS NOT NULL)",
+      "indexname": "strategy_candidates_source_discovery_item_id_uidx",
+      "tablename": "strategy_candidates"
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX strategy_discovery_items_pkey ON public.strategy_discovery_items USING btree (id)",
+      "indexname": "strategy_discovery_items_pkey",
+      "tablename": "strategy_discovery_items"
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX strategy_discovery_items_run_id_symbol_key ON public.strategy_discovery_items USING btree (run_id, symbol)",
+      "indexname": "strategy_discovery_items_run_id_symbol_key",
+      "tablename": "strategy_discovery_items"
+    },
+    {
+      "indexdef": "CREATE INDEX strategy_discovery_items_run_idx ON public.strategy_discovery_items USING btree (run_id)",
+      "indexname": "strategy_discovery_items_run_idx",
+      "tablename": "strategy_discovery_items"
+    },
+    {
+      "indexdef": "CREATE INDEX strategy_discovery_items_symbol_idx ON public.strategy_discovery_items USING btree (symbol)",
+      "indexname": "strategy_discovery_items_symbol_idx",
+      "tablename": "strategy_discovery_items"
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX strategy_discovery_runs_pkey ON public.strategy_discovery_runs USING btree (id)",
+      "indexname": "strategy_discovery_runs_pkey",
+      "tablename": "strategy_discovery_runs"
+    },
+    {
+      "indexdef": "CREATE INDEX strategy_discovery_runs_session_idx ON public.strategy_discovery_runs USING btree (session_date, phase)",
+      "indexname": "strategy_discovery_runs_session_idx",
+      "tablename": "strategy_discovery_runs"
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX strategy_discovery_runs_run_key_uidx ON public.strategy_discovery_runs USING btree (run_key) WHERE (run_key IS NOT NULL)",
+      "indexname": "strategy_discovery_runs_run_key_uidx",
+      "tablename": "strategy_discovery_runs"
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX strategy_signals_pkey ON public.strategy_signals USING btree (id)",
+      "indexname": "strategy_signals_pkey",
+      "tablename": "strategy_signals"
+    },
+    {
+      "indexdef": "CREATE INDEX strategy_signals_created_at_idx ON public.strategy_signals USING btree (created_at DESC)",
+      "indexname": "strategy_signals_created_at_idx",
+      "tablename": "strategy_signals"
+    },
+    {
+      "indexdef": "CREATE INDEX strategy_signals_symbol_idx ON public.strategy_signals USING btree (symbol, created_at DESC)",
+      "indexname": "strategy_signals_symbol_idx",
+      "tablename": "strategy_signals"
+    },
+    {
+      "indexdef": "CREATE INDEX strategy_signals_decision_idx ON public.strategy_signals USING btree (decision, created_at DESC)",
+      "indexname": "strategy_signals_decision_idx",
+      "tablename": "strategy_signals"
+    },
+    {
+      "indexdef": "CREATE INDEX strategy_signals_experiment_class_idx ON public.strategy_signals USING btree (experiment_class, created_at DESC)",
+      "indexname": "strategy_signals_experiment_class_idx",
+      "tablename": "strategy_signals"
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX strategy_signals_one_trade_per_journal ON public.strategy_signals USING btree (journal_trade_id) WHERE (decision = 'TRADE'::text)",
+      "indexname": "strategy_signals_one_trade_per_journal",
+      "tablename": "strategy_signals"
+    },
+    {
+      "indexdef": "CREATE INDEX strategy_signals_journal_history ON public.strategy_signals USING btree (journal_trade_id, evaluated_at)",
+      "indexname": "strategy_signals_journal_history",
+      "tablename": "strategy_signals"
+    }
+  ],
+  "triggers": [
+    "CREATE TRIGGER set_strategy_signals_updated_at BEFORE UPDATE ON public.strategy_signals FOR EACH ROW EXECUTE FUNCTION set_strategy_signals_updated_at()",
+    "CREATE TRIGGER trg_strategy_candidates_updated_at BEFORE UPDATE ON public.strategy_candidates FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+  ],
+  "constraints": [
+    {
+      "name": "strategy_signals_decision_check",
+      "table": "strategy_signals",
+      "definition": "CHECK ((decision = ANY (ARRAY['TRADE'::text, 'WAIT'::text, 'NO_TRADE'::text])))"
+    },
+    {
+      "name": "strategy_signals_direction_check",
+      "table": "strategy_signals",
+      "definition": "CHECK ((direction = ANY (ARRAY['LONG'::text, 'SHORT'::text])))"
+    },
+    {
+      "name": "strategy_signals_experiment_class_check",
+      "table": "strategy_signals",
+      "definition": "CHECK ((experiment_class = ANY (ARRAY['STRATEGY_1'::text, 'INFRASTRUCTURE_TEST'::text])))"
+    },
+    {
+      "name": "strategy_signals_nonnegative_prices",
+      "table": "strategy_signals",
+      "definition": "CHECK ((((entry_price IS NULL) OR (entry_price > (0)::numeric)) AND ((stop_price IS NULL) OR (stop_price > (0)::numeric)) AND ((target_price IS NULL) OR (target_price > (0)::numeric)) AND ((risk_per_share IS NULL) OR (risk_per_share >= (0)::numeric)) AND ((dollar_risk IS NULL) OR (dollar_risk >= (0)::numeric)) AND ((notional IS NULL) OR (notional >= (0)::numeric))))"
+    },
+    {
+      "name": "strategy_signals_pkey",
+      "table": "strategy_signals",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "strategy_signals_positive_qty",
+      "table": "strategy_signals",
+      "definition": "CHECK (((qty IS NULL) OR (qty > 0)))"
+    },
+    {
+      "name": "strategy_signals_shadow_no_execution",
+      "table": "strategy_signals",
+      "definition": "CHECK (((status <> 'SHADOW'::text) OR ((alpaca_order_id IS NULL) AND (executor_response IS NULL) AND (execution_status IS NULL))))"
+    },
+    {
+      "name": "strategy_signals_status_check",
+      "table": "strategy_signals",
+      "definition": "CHECK ((status = ANY (ARRAY['SHADOW'::text, 'PENDING'::text, 'SUBMITTED'::text, 'FILLED'::text, 'CANCELLED'::text, 'REJECTED'::text, 'ERROR'::text])))"
+    },
+    {
+      "name": "strategy_signals_strategy_id_check",
+      "table": "strategy_signals",
+      "definition": "CHECK ((strategy_id = 'STRATEGY_1'::text))"
+    },
+    {
+      "name": "strategy_candidates_catalyst_tier_check",
+      "table": "strategy_candidates",
+      "definition": "CHECK ((catalyst_tier = ANY (ARRAY['A'::text, 'B'::text, 'C'::text])))"
+    },
+    {
+      "name": "strategy_candidates_direction_check",
+      "table": "strategy_candidates",
+      "definition": "CHECK ((direction = ANY (ARRAY['LONG'::text, 'SHORT'::text])))"
+    },
+    {
+      "name": "strategy_candidates_discovery_phase_check",
+      "table": "strategy_candidates",
+      "definition": "CHECK ((discovery_phase = ANY (ARRAY['PREMARKET'::text, 'POST_OPEN'::text])))"
+    },
+    {
+      "name": "strategy_candidates_experiment_class_check",
+      "table": "strategy_candidates",
+      "definition": "CHECK ((experiment_class = ANY (ARRAY['STRATEGY_1'::text, 'INFRASTRUCTURE_TEST'::text])))"
+    },
+    {
+      "name": "strategy_candidates_journal_trade_id_key",
+      "table": "strategy_candidates",
+      "definition": "UNIQUE (journal_trade_id)"
+    },
+    {
+      "name": "strategy_candidates_last_signal_id_fkey",
+      "table": "strategy_candidates",
+      "definition": "FOREIGN KEY (last_signal_id) REFERENCES strategy_signals(id)"
+    },
+    {
+      "name": "strategy_candidates_last_worker_decision_check",
+      "table": "strategy_candidates",
+      "definition": "CHECK ((last_worker_decision = ANY (ARRAY['TRADE'::text, 'WAIT'::text, 'NO_TRADE'::text])))"
+    },
+    {
+      "name": "strategy_candidates_market_regime_check",
+      "table": "strategy_candidates",
+      "definition": "CHECK ((market_regime = ANY (ARRAY['Bullish'::text, 'Bearish'::text, 'Mixed'::text, 'Choppy'::text])))"
+    },
+    {
+      "name": "strategy_candidates_operational_state_check",
+      "table": "strategy_candidates",
+      "definition": "CHECK ((operational_state = ANY (ARRAY['HOLD_UNRESOLVED'::text, 'WAITING_FOR_TRIGGER'::text, 'CONFIRMATION_REQUIRED'::text, 'TRADE_READY'::text, 'REJECTED'::text])))"
+    },
+    {
+      "name": "strategy_candidates_pkey",
+      "table": "strategy_candidates",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "strategy_candidates_status_check",
+      "table": "strategy_candidates",
+      "definition": "CHECK ((status = ANY (ARRAY['WAITING'::text, 'TRIGGER_OBSERVED'::text, 'CONFIRMATION_REQUIRED'::text, 'SHADOW_TRADE'::text, 'NO_TRADE'::text, 'CLOSED'::text])))"
+    },
+    {
+      "name": "strategy_candidates_trigger_operator_check",
+      "table": "strategy_candidates",
+      "definition": "CHECK ((trigger_operator = ANY (ARRAY['GTE'::text, 'LTE'::text])))"
+    },
+    {
+      "name": "strategy_candidates_trigger_pair",
+      "table": "strategy_candidates",
+      "definition": "CHECK ((((trigger_price IS NULL) AND (trigger_operator IS NULL)) OR ((trigger_price IS NOT NULL) AND (trigger_operator IS NOT NULL))))"
+    },
+    {
+      "name": "strategy_candidate_events_candidate_id_fkey",
+      "table": "strategy_candidate_events",
+      "definition": "FOREIGN KEY (candidate_id) REFERENCES strategy_candidates(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "strategy_candidate_events_event_type_check",
+      "table": "strategy_candidate_events",
+      "definition": "CHECK ((event_type = ANY (ARRAY['INGESTED'::text, 'UPDATED'::text, 'PRICE_CHECK'::text, 'TRIGGER_OBSERVED'::text, 'TRIGGER_CONFIRMED'::text, 'WORKER_EVALUATED'::text, 'CLOSED'::text, 'ERROR'::text])))"
+    },
+    {
+      "name": "strategy_candidate_events_pkey",
+      "table": "strategy_candidate_events",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "strategy_discovery_runs_phase_check",
+      "table": "strategy_discovery_runs",
+      "definition": "CHECK ((phase = ANY (ARRAY['PREMARKET'::text, 'POST_OPEN'::text])))"
+    },
+    {
+      "name": "strategy_discovery_runs_pkey",
+      "table": "strategy_discovery_runs",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "strategy_discovery_runs_status_check",
+      "table": "strategy_discovery_runs",
+      "definition": "CHECK ((status = ANY (ARRAY['IN_PROGRESS'::text, 'PARTIAL'::text, 'COMPLETE'::text, 'DATA_UNAVAILABLE'::text, 'ERROR'::text])))"
+    },
+    {
+      "name": "strategy_discovery_items_operational_state_check",
+      "table": "strategy_discovery_items",
+      "definition": "CHECK ((operational_state = ANY (ARRAY['WATCHLIST_CANDIDATE'::text, 'WORKER_READY'::text])))"
+    },
+    {
+      "name": "strategy_discovery_items_pkey",
+      "table": "strategy_discovery_items",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "strategy_discovery_items_promotion_status_check",
+      "table": "strategy_discovery_items",
+      "definition": "CHECK ((promotion_status = ANY (ARRAY['DISCOVERED'::text, 'REVIEW_REQUIRED'::text, 'ELIGIBLE_FOR_ORCHESTRATOR'::text, 'PROMOTED'::text, 'REJECTED'::text])))"
+    },
+    {
+      "name": "strategy_discovery_items_run_id_fkey",
+      "table": "strategy_discovery_items",
+      "definition": "FOREIGN KEY (run_id) REFERENCES strategy_discovery_runs(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "strategy_discovery_items_run_id_symbol_key",
+      "table": "strategy_discovery_items",
+      "definition": "UNIQUE (run_id, symbol)"
+    },
+    {
+      "name": "strategy_discovery_items_verification_status_check",
+      "table": "strategy_discovery_items",
+      "definition": "CHECK ((verification_status = ANY (ARRAY['REVIEW_REQUIRED'::text, 'EVIDENCE_PRESENT'::text, 'VERIFIED'::text, 'REJECTED'::text])))"
+    }
+  ]
+}

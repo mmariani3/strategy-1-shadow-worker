@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: strategy-1-shadow-orchestrator
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements-orchestrator.txt
+    startCommand: uvicorn orchestrator:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.11
+      - key: RULESET_VERSION
+        value: v0.3
+      - key: SUPABASE_URL
+        value: https://zgegtiqsjotszaspcgzf.supabase.co
+      - key: STRATEGY_WORKER_URL
+        value: https://strategy-1-shadow-worker.onrender.com
+      - key: ALPACA_DATA_FEED
+        value: iex
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: WORKER_TOKEN
+        sync: false
+      - key: ORCHESTRATOR_TOKEN
+        generateValue: true
+      - key: ALPACA_API_KEY
+        sync: false
+      - key: ALPACA_API_SECRET
+        sync: false

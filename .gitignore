@@ -1,0 +1,10 @@
+.venv/
+.deps/
+node_modules/
+.tmp/
+__pycache__/
+.pytest_cache/
+pytest-cache-files-*/
+*.pyc
+.env*
+supabase/.temp/
