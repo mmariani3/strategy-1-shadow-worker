@@ -1,0 +1,17 @@
+{
+  "service": "srv-dal8a2m7bikc73enjn5g",
+  "starts_at": "2026-11-04T21:30:00-08:00",
+  "expires_at": "2026-11-04T21:50:00-08:00",
+  "authorization_id": "757a33edd8434466b7e3288203d74d00",
+  "schema": "normal-worker-ca-acceptance-v1",
+  "scope": "ONE_NORMAL_WORKER_CA_ACCEPTANCE",
+  "source_files": {
+    "review_contract.py": "d8b1cb8f6e199a5ab096e39380e1f94525f74b3be00912443937523a8ed43c84",
+    "security_ca_build.py": "9b041a228498b2998f5f62e10217c3caa0af9b83a48efceb8fba01ac1450aa63",
+    "requirements.txt": "fe49367946aa1f80570e3f19d2bf086bc14df8f0e028da489ab3ef6820688ebe",
+    "build_info.py": "6b4ec2eda4ea9220338f15c79ea6c14cdd9776b0f4d8e91cc42a9951721b0689",
+    "main.py": "3eeef0fc4eb353c85a060a00764e0fc195f368e4e82260f9341c8e759ead162d",
+    "security_ca_acceptance.py": "53f3b57e9635c0cf013488748b413bbdf25e9329f9c33f053f869ef68630d1ec"
+  },
+  "armed": true
+}
