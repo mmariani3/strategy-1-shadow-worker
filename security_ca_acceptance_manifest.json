@@ -1,8 +1,8 @@
 {
   "service": "srv-dal8a2m7bikc73enjn5g",
-  "starts_at": "2026-11-07T11:00:00-08:00",
-  "expires_at": "2026-11-07T11:20:00-08:00",
-  "authorization_id": "94278eaa907d4536b51b2c568f69ee58",
+  "starts_at": "2026-11-08T08:30:00-08:00",
+  "expires_at": "2026-11-08T08:50:00-08:00",
+  "authorization_id": "a7e04e263abd4c339d6a03a58728fe78",
   "schema": "normal-worker-ca-acceptance-v1",
   "scope": "ONE_NORMAL_WORKER_CA_ACCEPTANCE",
   "source_files": {
